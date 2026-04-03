@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from pydantic import BaseModel, ConfigDict
 from fastapi.responses import HTMLResponse
 
@@ -39,7 +39,9 @@ class SessionRequest(BaseModel):
 
 
 @router.post("/reset")
-def reset(request: ResetRequest) -> dict:
+def reset(request: ResetRequest | None = Body(default=None)) -> dict:
+    if request is None:
+        request = ResetRequest()
     observation, session_id, task_info = env.reset(request.task_id, request.seed)
     return {"observation": observation.model_dump(), "session_id": session_id, "task_info": task_info}
 
