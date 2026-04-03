@@ -34,6 +34,13 @@ def test_reset_endpoint_task1() -> None:
     assert "observation" in payload
 
 
+def test_reset_endpoint_no_body_defaults_to_task1() -> None:
+    response = client.post("/reset")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["task_info"]["max_steps"] == 8
+
+
 def test_reset_endpoint_empty_body_defaults_to_task1() -> None:
     response = client.post("/reset", json={})
     assert response.status_code == 200

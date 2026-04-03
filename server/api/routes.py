@@ -194,6 +194,31 @@ def index() -> str:
     .ops {
       margin-top: 24px;
     }
+    .linklist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .linklist a {
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+    }
+    .validator-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #eaf5f2;
+      color: var(--accent);
+      border: 1px solid #c6e3dc;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
     @media (max-width: 900px) {
       .hero, .grid, .pillrow {
         grid-template-columns: 1fr;
@@ -210,6 +235,11 @@ def index() -> str:
         <h1>Clinical Trial Screening for Real Agents</h1>
         <p>ClinicalTrialEnv simulates the work of a clinical trial coordinator: screening synthetic patients, handling uncertain evidence, reacting to protocol amendments, and making safety-sensitive enrollment decisions.</p>
         <p>The environment is deterministic by seed, exposes typed OpenEnv-compatible APIs, and includes three grader-backed tasks spanning easy, medium, and hard difficulty.</p>
+        <div class="linklist">
+          <a href="https://github.com/abisheik687/clinicaltrial-env" target="_blank" rel="noreferrer">GitHub Repo</a>
+          <a href="https://huggingface.co/spaces/abisheiks/clinicaltrial-env" target="_blank" rel="noreferrer">HF Space</a>
+        </div>
+        <div class="validator-note">Validator-ready: /health and /reset are live, Docker runs on port 7860, and openenv validate passes.</div>
         <div class="pillrow">
           <div class="pill"><strong>3 Tasks</strong><br>Easy to hard progression</div>
           <div class="pill"><strong>Typed Models</strong><br>Pydantic v2 observation, action, reward</div>

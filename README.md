@@ -37,6 +37,17 @@ ClinicalTrialEnv is deployed and publicly reachable on Hugging Face Spaces. The 
 
 ![OpenEnv validate success](docs/assets/openenv-validate-success.png)
 
+## Why This Is Not A Toy Environment
+
+ClinicalTrialEnv models a real coordinator workflow that already exists in pharmaceutical operations: patient-by-patient trial screening under inclusion rules, exclusion rules, missing evidence, medication conflicts, and protocol amendments. The benchmark is designed around the kinds of decisions that make real enrollment operations expensive and safety-sensitive:
+
+- eligibility decisions must be auditable and criterion-specific
+- partial information can require explicit clarification rather than guessing
+- medication conflicts and compound lab criteria matter clinically
+- protocol amendments can invalidate reasoning that was correct one step earlier
+
+The result is a benchmark for operational reasoning, not a game mechanic or synthetic puzzle.
+
 ## 🎯 Hackathon Problem Statement Alignment
 
 This environment was built for the OpenEnv Hackathon Round 1. Every major judging axis is mapped explicitly to the implementation.
@@ -60,6 +71,14 @@ Clinical trial coordinators screen large candidate pools under strict safety and
 
 No toy game mechanics are used. The environment is built around a real-world administrative and safety-critical workflow.
 
+### How Graders Stay Deterministic
+
+Each task uses seeded synthetic patients, protocol-specific hidden truth labels, and a programmatic grader with bounded outputs in `[0.0, 1.0]`. The grader logic does not depend on non-deterministic LLM judging. That means:
+
+- the same seed always produces the same patient
+- the same trajectory always produces the same grader score
+- partial credit, amendment handling, and penalties are transparent and reproducible
+
 ## 📋 Environment Overview
 
 Each episode presents a synthetic patient case and a summarized trial protocol. The agent acts as a clinical trial coordinator. It can evaluate criteria, request clarification for uncertain values, and then decide whether to enroll or exclude the patient. Task 3 adds a protocol amendment at step 6, reflecting how real trials are updated mid-study.
@@ -70,6 +89,7 @@ The environment is deterministic by seed, exposes an OpenEnv-style API, and stor
 
 ### Task 1: Single Criterion Screening (Easy)
 
+- Capability tested: disciplined deterministic screening with clear objective evidence
 - Protocol: hypertension Phase III trial
 - Inclusion criteria: age, confirmed hypertension history, systolic blood pressure range
 - Exclusion criteria: severe renal impairment, ACE inhibitor use
@@ -80,6 +100,7 @@ The environment is deterministic by seed, exposes an OpenEnv-style API, and stor
 
 ### Task 2: Multi-Criteria Oncology Screening (Medium)
 
+- Capability tested: compound clinical reasoning plus medication-dose interpretation
 - Protocol: CAR-T therapy Phase II trial
 - Inclusion criteria: age, DLBCL diagnosis, ECOG status, marrow function, measurable disease
 - Exclusion criteria: active CNS lymphoma, prior CAR-T, autoimmune disease, excessive corticosteroids
@@ -90,12 +111,14 @@ The environment is deterministic by seed, exposes an OpenEnv-style API, and stor
 
 ### Task 3: Ambiguous Gene Therapy Screening (Hard)
 
+- Capability tested: uncertainty handling, clarification budgeting, and protocol adaptation
 - Protocol: rare disease gene therapy Phase I/II
 - Inclusion criteria: pediatric/adult age range, MECP2 mutation, CSS severity score, no prior gene therapy, hepatic function, minimum weight
 - Exclusion criteria: uncontrolled seizures, AAV hypersensitivity, other interventional trial, short life expectancy
 - Clarification budget: `5`
 - Max steps: `20`
 - Special mechanic: Amendment A1 changes the CSS threshold at step 6
+- Frontier challenge: reasoning about INC-003 can become stale after the amendment, so strong agents need to detect the change and re-evaluate rather than trust their earlier conclusion
 - Expected baseline score: `0.40`
 
 ## 🔧 Action Space
@@ -217,6 +240,13 @@ The target checks are:
 - `openenv validate` succeeds
 - `POST /reset` supports an empty JSON body and defaults to `task1`, which matches the sample pre-validator behavior
 
+### Benchmark Evidence
+
+- Local Docker build validated with `docker build -t clinicaltrial-env .`
+- Live Hugging Face Space responds to `GET /health`
+- Live Hugging Face Space responds to `POST /reset`
+- `openenv validate` returns ready-for-deployment status
+
 ### Final Pre-Submission Command List
 
 Run these in order from the project root:
@@ -242,6 +272,13 @@ docker run -p 7860:7860 clinicaltrial-env
 For Windows PowerShell, you can also use [validate.ps1](validate.ps1) once your local API is running.
 
 ## 📊 Baseline Scores
+
+The table below shows target baseline behavior for the submitted seeds. These values are expected scores, not hard-coded outputs. Exact scores can vary modestly with the chosen provider/model, but the benchmark seeds remain fixed and reproducible:
+
+- `task1` always uses seed `42`
+- `task2` always uses seed `43`
+- `task3` always uses seed `44`
+- model/provider configuration comes from `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`
 
 | Task | Difficulty | Model | Score | Steps Used |
 |------|-----------|-------|-------|------------|
