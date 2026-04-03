@@ -20,6 +20,23 @@ app_port: 7860
 
 [![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-compatible-blue)](https://github.com/openenv-ai) [![HF Spaces](https://img.shields.io/badge/HF-Spaces-green)](https://huggingface.co/spaces) [![Docker](https://img.shields.io/badge/Docker-ready-2496ED)](https://www.docker.com/)
 
+## Live Deployment
+
+- GitHub repository: [abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
+- Hugging Face Space: [abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- Live app URL: [https://abisheiks-clinicaltrial-env.hf.space](https://abisheiks-clinicaltrial-env.hf.space)
+
+## Validation Status
+
+ClinicalTrialEnv is deployed and publicly reachable on Hugging Face Spaces. The core pre-submission checks have been verified:
+
+- `openenv validate` passes
+- `docker build` succeeds
+- `GET /health` returns `200`
+- `POST /reset` returns `200`
+
+![OpenEnv validate success](docs/assets/openenv-validate-success.png)
+
 ## 🎯 Hackathon Problem Statement Alignment
 
 This environment was built for the OpenEnv Hackathon Round 1. Every major judging axis is mapped explicitly to the implementation.
@@ -106,7 +123,7 @@ Example:
 }
 ```
 
-Full reference: [docs/action_space.md](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/action_space.md)
+Full reference: [docs/action_space.md](docs/action_space.md)
 
 ## 👁️ Observation Space
 
@@ -119,7 +136,7 @@ Observations include:
 - trial protocol summary with inclusion and exclusion criteria
 - step counters, action history, and system messages
 
-Task 3 uses `trial_protocol_summary.amendment_active` and `amendment_description` to signal that eligibility logic has changed. Full reference: [docs/observation_space.md](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/observation_space.md)
+Task 3 uses `trial_protocol_summary.amendment_active` and `amendment_description` to signal that eligibility logic has changed. Full reference: [docs/observation_space.md](docs/observation_space.md)
 
 ## 💰 Reward Function
 
@@ -133,7 +150,7 @@ ClinicalTrialEnv emits dense shaped reward during the episode and task-specific 
 - Final defer penalty: `-0.20`
 - Efficiency bonus: up to `+0.25`
 
-Normalization clamps each returned reward into `[0.0, 1.0]`. Full design rationale: [docs/reward_design.md](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/reward_design.md)
+Normalization clamps each returned reward into `[0.0, 1.0]`. Full design rationale: [docs/reward_design.md](docs/reward_design.md)
 
 ## 🚀 Quick Start
 
@@ -183,7 +200,7 @@ The Docker image is HF Spaces compatible and listens on port `7860`.
 - `curl http://localhost:7860/health` returns HTTP `200`
 - `curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{}'` returns HTTP `200`
 
-Tip: the repository now includes [.dockerignore](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/.dockerignore) so your local `.venv`, test cache, and docs do not bloat the Docker context.
+Tip: the repository now includes [.dockerignore](.dockerignore) so your local `.venv`, test cache, and docs do not bloat the Docker context.
 
 ## ✅ Pre-Submission Validation
 
@@ -222,7 +239,7 @@ docker build -t clinicaltrial-env .
 docker run -p 7860:7860 clinicaltrial-env
 ```
 
-For Windows PowerShell, you can also use [validate.ps1](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/validate.ps1) once your local API is running.
+For Windows PowerShell, you can also use [validate.ps1](validate.ps1) once your local API is running.
 
 ## 📊 Baseline Scores
 
@@ -242,7 +259,7 @@ FastAPI Routes
      -> RewardCalculator + Task Graders
 ```
 
-Deep dive: [docs/architecture.md](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/architecture.md)
+Deep dive: [docs/architecture.md](docs/architecture.md)
 
 ## 📁 Project Structure
 
@@ -262,12 +279,12 @@ clinicaltrial-env/
 
 ## 🔬 Technical Deep Dive
 
-- [Architecture](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/architecture.md)
-- [Action Space](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/action_space.md)
-- [Observation Space](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/observation_space.md)
-- [Reward Design](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/reward_design.md)
-- [Synthetic Cohort Analysis](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/data_analysis.md)
-- [HF Spaces Deployment Checklist](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/hf_spaces_deployment.md)
+- [Architecture](docs/architecture.md)
+- [Action Space](docs/action_space.md)
+- [Observation Space](docs/observation_space.md)
+- [Reward Design](docs/reward_design.md)
+- [Synthetic Cohort Analysis](docs/data_analysis.md)
+- [HF Spaces Deployment Checklist](docs/hf_spaces_deployment.md)
 
 ## 📈 Synthetic Data Quality
 
@@ -279,7 +296,7 @@ The environment does not rely on a fixed CSV dump. Instead it generates determin
 - task2 ANC pending rate: `0.36`
 - task3 critical exclusion rate: `0.42`
 
-This keeps the benchmark reproducible while still creating non-trivial decision pressure. Full details: [docs/data_analysis.md](/E:/Users/Abisheik/downloads/meta%20Hackathon/clinicaltrial-env/docs/data_analysis.md)
+This keeps the benchmark reproducible while still creating non-trivial decision pressure. Full details: [docs/data_analysis.md](docs/data_analysis.md)
 
 ## 📄 License
 
