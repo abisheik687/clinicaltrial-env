@@ -1,0 +1,128 @@
+trial_id: "TRIAL-C-GENE-003"
+title: "Phase I/II AAV Gene Therapy for Rett Syndrome"
+phase: "I"
+sponsor: "ClinicalTrialEnv Research Consortium"
+version: "1.0"
+amendment_enabled: true
+max_enrollment: 48
+criteria:
+  inclusion:
+    - id: "INC-001"
+      description: "Patient age between 4 and 45 years"
+      type: "demographic"
+      field: "demographics.age"
+      operator: "between"
+      values: [4, 45]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-002"
+      description: "Confirmed MECP2 genetic mutation, including estimated result with confirmatory evidence"
+      type: "genetic"
+      field: "lab_values.mecp2_mutation"
+      operator: "positive"
+      values: [1]
+      certainty_always: "estimated"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: true
+    - id: "INC-003"
+      description: "Rett Syndrome severity score between 12 and 36 on CSS scale"
+      type: "clinical_score"
+      field: "lab_values.css_score"
+      operator: "between"
+      values: [12, 36]
+      certainty_always: "pending"
+      weight: 1.2
+      is_critical: false
+      clarification_available: true
+      is_ambiguous: true
+    - id: "INC-004"
+      description: "No prior gene therapy exposure"
+      type: "history"
+      field: "history.prior_gene_therapy"
+      operator: "equals"
+      values: [false]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-005"
+      description: "Adequate hepatic function with ALT and AST no greater than three times upper limit of normal"
+      type: "compound_lab"
+      field: "lab_values.alt,lab_values.ast"
+      operator: "all_less_equal_multiplier"
+      values: [3]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-006"
+      description: "Weight at least 13 kg"
+      type: "demographic"
+      field: "demographics.weight_kg"
+      operator: "greater_equal"
+      values: [13]
+      certainty_always: "confirmed"
+      weight: 0.8
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+  exclusion:
+    - id: "EXC-001"
+      description: "Active seizure disorder not controlled by medication"
+      type: "history"
+      field: "history.seizure_control"
+      operator: "equals"
+      values: [true]
+      certainty_always: "estimated"
+      weight: 1.0
+      is_critical: true
+      clarification_available: true
+      is_ambiguous: true
+    - id: "EXC-002"
+      description: "Hypersensitivity to AAV vectors"
+      type: "allergy"
+      field: "allergy.aav_vector"
+      operator: "equals"
+      values: [true]
+      certainty_always: "estimated"
+      weight: 1.0
+      is_critical: true
+      clarification_available: true
+      is_ambiguous: false
+    - id: "EXC-003"
+      description: "Current enrollment in another interventional trial"
+      type: "history"
+      field: "history.other_trial"
+      operator: "equals"
+      values: [true]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "EXC-004"
+      description: "Life expectancy under 12 months"
+      type: "prognosis"
+      field: "history.life_expectancy_months"
+      operator: "less_than"
+      values: [12]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: true
+      clarification_available: false
+      is_ambiguous: false
+amendments:
+  - amendment_id: "A1"
+    trigger_step: 6
+    description: "Severity score inclusion range expanded: minimum score reduced from 12 to 10"
+    affects_criterion: "INC-003"
+    change_type: "value_update"
+    original_values: [12, 36]
+    updated_values: [10, 36]

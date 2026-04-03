@@ -1,0 +1,66 @@
+name: clinicaltrial-env
+version: "1.0.0"
+description: >
+  An RL environment where AI agents learn to screen patients for clinical trial
+  enrollment — evaluating inclusion/exclusion criteria, handling ambiguous lab
+  values, requesting clarifications, and making enrollment decisions under
+  protocol amendments.
+author: "ClinicalTrialEnv Team"
+license: "MIT"
+tags:
+  - openenv
+  - healthcare
+  - clinical-trials
+  - real-world
+  - multi-step
+  - partial-rewards
+
+environment:
+  type: "sequential-decision"
+  episode_types:
+    - single_patient_screening
+  action_space: "discrete+structured"
+  observation_space: "structured-dict"
+  reward_range: [0.0, 1.0]
+  max_steps_per_episode: 20
+  deterministic: true
+
+tasks:
+  - id: task1
+    name: "Single Criterion Hypertension Screening"
+    difficulty: easy
+    max_steps: 8
+    description: "Screen patient for Phase III hypertension trial with 5 clear criteria"
+  - id: task2
+    name: "Multi-Criteria Oncology Screening"
+    difficulty: medium
+    max_steps: 14
+    description: "Screen patient for CAR-T trial with 9 criteria including drug interactions"
+  - id: task3
+    name: "Ambiguous Gene Therapy Screening with Protocol Amendment"
+    difficulty: hard
+    max_steps: 20
+    description: "Screen patient for gene therapy trial with uncertain values and mid-episode amendment"
+
+api:
+  framework: fastapi
+  base_url: "http://localhost:7860"
+  endpoints:
+    reset: "POST /reset"
+    step: "POST /step"
+    state: "GET /state"
+    health: "GET /health"
+
+deployment:
+  platform: huggingface-spaces
+  space_sdk: docker
+  dockerfile: "Dockerfile"
+  hf_space_tags: ["openenv"]
+
+baseline:
+  script: "inference.py"
+  model: "gpt-4o-mini"
+  expected_scores:
+    task1: 0.85
+    task2: 0.65
+    task3: 0.40

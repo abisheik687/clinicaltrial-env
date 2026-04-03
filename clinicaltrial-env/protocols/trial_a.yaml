@@ -1,0 +1,69 @@
+trial_id: "TRIAL-A-HTN-001"
+title: "Phase III Trial of Novel ARB in Essential Hypertension"
+phase: "III"
+sponsor: "ClinicalTrialEnv Research Consortium"
+version: "1.0"
+amendment_enabled: false
+max_enrollment: 500
+criteria:
+  inclusion:
+    - id: "INC-001"
+      description: "Patient age between 18 and 75 years"
+      type: "demographic"
+      field: "demographics.age"
+      operator: "between"
+      values: [18, 75]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-002"
+      description: "Diagnosed hypertension (ICD-10: I10) for minimum 6 months"
+      type: "diagnosis"
+      field: "diagnosis.icd10_code"
+      operator: "equals"
+      values: ["I10"]
+      duration_months_min: 6
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-003"
+      description: "Systolic blood pressure 140-180 mmHg at screening"
+      type: "lab_value"
+      field: "lab_values.systolic_bp"
+      operator: "between"
+      values: [140, 180]
+      unit: "mmHg"
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+  exclusion:
+    - id: "EXC-001"
+      description: "eGFR less than 30 mL/min/1.73m² (severe renal impairment)"
+      type: "lab_value"
+      field: "lab_values.egfr"
+      operator: "less_than"
+      values: [30]
+      unit: "mL/min/1.73m²"
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: true
+      clarification_available: false
+      is_ambiguous: false
+    - id: "EXC-002"
+      description: "Current use of ACE inhibitors (lisinopril, enalapril, ramipril, etc.)"
+      type: "medication"
+      field: "current_medications"
+      operator: "contains_class"
+      values: ["ACE_INHIBITOR"]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.coverage
+dist
+build
+*.egg-info
+uv.lock
+tests
+docs
+

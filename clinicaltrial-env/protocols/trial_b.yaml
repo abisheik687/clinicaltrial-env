@@ -1,0 +1,111 @@
+trial_id: "TRIAL-B-CART-002"
+title: "Phase II CAR-T Cell Therapy in Relapsed/Refractory DLBCL"
+phase: "II"
+sponsor: "ClinicalTrialEnv Research Consortium"
+version: "1.0"
+amendment_enabled: false
+max_enrollment: 120
+criteria:
+  inclusion:
+    - id: "INC-001"
+      description: "Patient age between 18 and 65 years"
+      type: "demographic"
+      field: "demographics.age"
+      operator: "between"
+      values: [18, 65]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-002"
+      description: "Confirmed diagnosis of Diffuse Large B-Cell Lymphoma (ICD-10 C83.3)"
+      type: "diagnosis"
+      field: "diagnosis.icd10_code"
+      operator: "equals"
+      values: ["C83.3"]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-003"
+      description: "ECOG Performance Status between 0 and 2"
+      type: "clinical_score"
+      field: "lab_values.ecog_status"
+      operator: "between"
+      values: [0, 2]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "INC-004"
+      description: "Adequate bone marrow function: ANC at least 1.0 x10^9/L and platelets at least 75 x10^9/L"
+      type: "compound_lab"
+      field: "lab_values.anc,lab_values.platelets"
+      operator: "all_greater_equal"
+      values: [1.0, 75.0]
+      unit: "x10^9/L"
+      certainty_always: "pending"
+      weight: 1.2
+      is_critical: false
+      clarification_available: true
+      is_ambiguous: false
+    - id: "INC-005"
+      description: "Measurable disease per Lugano criteria"
+      type: "disease_assessment"
+      field: "diagnosis.disease_stage"
+      operator: "exists"
+      values: ["measurable"]
+      certainty_always: "confirmed"
+      weight: 0.8
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+  exclusion:
+    - id: "EXC-001"
+      description: "Active CNS lymphoma"
+      type: "diagnosis_modifier"
+      field: "diagnosis.primary_condition"
+      operator: "contains_flag"
+      values: ["ACTIVE_CNS"]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: true
+      clarification_available: false
+      is_ambiguous: false
+    - id: "EXC-002"
+      description: "Prior CAR-T cell therapy"
+      type: "history"
+      field: "history.prior_car_t"
+      operator: "equals"
+      values: [true]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "EXC-003"
+      description: "Active autoimmune disease requiring systemic treatment"
+      type: "history"
+      field: "history.autoimmune_systemic_treatment"
+      operator: "equals"
+      values: [true]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+    - id: "EXC-004"
+      description: "Current use of corticosteroids greater than 10mg prednisone equivalent per day"
+      type: "medication"
+      field: "current_medications"
+      operator: "prednisone_equivalent_greater_than"
+      values: [10]
+      certainty_always: "confirmed"
+      weight: 1.0
+      is_critical: false
+      clarification_available: false
+      is_ambiguous: false
+
