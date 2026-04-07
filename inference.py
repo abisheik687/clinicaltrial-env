@@ -40,6 +40,11 @@ TASKS = [
     {"task_id": "task2", "seed": 43, "max_steps": 14, "name": "Multi-Criteria Screening"},
     {"task_id": "task3", "seed": 44, "max_steps": 20, "name": "Amendment Screening"},
 ]
+MAX_TOTAL_REWARD = {
+    "task1": 1.40,
+    "task2": 1.85,
+    "task3": 2.50,
+}
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -51,6 +56,12 @@ def format_logged_reward(reward: float) -> str:
     return f"{safe_reward:.2f}"
 
 
+def normalize_task_score(total_reward: float, task_id: str) -> float:
+    max_total_reward = MAX_TOTAL_REWARD[task_id]
+    normalized = total_reward / max_total_reward if max_total_reward > 0 else DISPLAY_SCORE_FLOOR
+    return min(max(normalized, DISPLAY_SCORE_FLOOR), DISPLAY_SCORE_CEILING)
+
+
 def log_step(step: int, action: str, reward: float, done: bool, error: Any) -> None:
     error_str = "null" if error is None else str(error).replace("\n", " ")
     print(
@@ -60,9 +71,13 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Any) -> N
     )
 
 
-def log_end(success: bool, steps: int, rewards: list[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> None:
     reward_str = ",".join(format_logged_reward(reward) for reward in rewards)
-    print(f"[END]   success={str(success).lower()} steps={steps} rewards={reward_str}", flush=True)
+    print(
+        f"[END]   success={str(success).lower()} steps={steps} "
+        f"score={format_logged_reward(score)} rewards={reward_str}",
+        flush=True,
+    )
 
 
 def build_system_prompt() -> str:
@@ -359,6 +374,7 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
     action_records: list[dict[str, Any]] = []
     rewards: list[float] = []
     steps_taken = 0
+    score = DISPLAY_SCORE_FLOOR
     success = False
 
     try:
@@ -396,13 +412,16 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
 
             log_step(step=step, action=action_str, reward=reward, done=done, error=info.get("error"))
 
-        success = (sum(rewards) >= SUCCESS_SCORE_THRESHOLD) if rewards else False
+        total_reward = sum(rewards)
+        score = normalize_task_score(total_reward, task_id)
+        success = total_reward >= SUCCESS_SCORE_THRESHOLD if rewards else False
     except Exception:
+        score = DISPLAY_SCORE_FLOOR
         success = False
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
-    return {"task_id": task_id, "success": success, "steps": steps_taken}
+    return {"task_id": task_id, "success": success, "steps": steps_taken, "score": score}
 
 
 async def main() -> None:

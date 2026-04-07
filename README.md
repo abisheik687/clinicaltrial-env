@@ -202,7 +202,7 @@ python inference.py
 [START] task=Single Criterion Screening env=clinicaltrial-env model=gpt-4o-mini
 [STEP]  step=1 action={"action_type":"evaluate_criterion","criterion_id":"INC-001"} reward=0.12 done=false error=null
 ...
-[END]   success=true steps=6 rewards=0.12,0.12,0.10,0.08,0.25,0.40
+[END]   success=true steps=6 score=0.59 rewards=0.12,0.12,0.10,0.08,0.25,0.40
 ```
 
 ## 🐳 Docker
@@ -279,6 +279,7 @@ The table below shows target baseline behavior for the submitted seeds. These va
 - `task2` always uses seed `43`
 - `task3` always uses seed `44`
 - model/provider configuration comes from `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`
+- emitted baseline task scores are normalized and clamped into the strict open interval `(0, 1)` for validator compatibility
 
 | Task | Difficulty | Model | Score | Steps Used |
 |------|-----------|-------|-------|------------|

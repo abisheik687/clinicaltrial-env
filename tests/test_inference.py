@@ -40,21 +40,32 @@ def setup_function() -> None:
 def test_log_format_strict_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     inference.log_start("Task", "clinicaltrial-env", "model-x")
     inference.log_step(2, '{"action_type":"evaluate_criterion"}', 0.125, False, None)
-    inference.log_end(True, 3, [0.1, 0.2, 0.3])
+    inference.log_end(True, 3, 0.6, [0.1, 0.2, 0.3])
     lines = capsys.readouterr().out.strip().splitlines()
 
     assert lines[0] == "[START] task=Task env=clinicaltrial-env model=model-x"
     assert lines[1] == '[STEP]  step=2 action={"action_type":"evaluate_criterion"} reward=0.12 done=false error=null'
-    assert lines[2] == "[END]   success=true steps=3 rewards=0.10,0.20,0.30"
+    assert lines[2] == "[END]   success=true steps=3 score=0.60 rewards=0.10,0.20,0.30"
 
 
 def test_logged_rewards_never_round_to_closed_interval_endpoints(capsys: pytest.CaptureFixture[str]) -> None:
     inference.log_step(1, '{"action_type":"defer"}', 0.0001, False, None)
-    inference.log_end(False, 2, [0.0001, 0.9999])
+    inference.log_end(False, 2, 0.9999, [0.0001, 0.9999])
     lines = capsys.readouterr().out.strip().splitlines()
 
     assert "reward=0.01" in lines[0]
-    assert lines[1] == "[END]   success=false steps=2 rewards=0.01,0.99"
+    assert lines[1] == "[END]   success=false steps=2 score=0.99 rewards=0.01,0.99"
+
+
+def test_normalize_task_score_stays_inside_open_interval() -> None:
+    assert inference.normalize_task_score(0.0, "task1") == 0.01
+    assert inference.normalize_task_score(999.0, "task1") == 0.99
+
+
+def test_run_task_returns_explicit_score_for_all_tasks() -> None:
+    for task_config in inference.TASKS:
+        score = inference.normalize_task_score(0.5, task_config["task_id"])
+        assert 0.0 < score < 1.0
 
 
 def test_malformed_model_output_falls_back_to_safe_action() -> None:
@@ -86,3 +97,4 @@ async def test_fallback_policy_completes_tasks_within_budget() -> None:
             result = await inference.run_task(fake_client, client, task_config)
             assert result["steps"] <= task_config["max_steps"]
             assert result["task_id"] == task_config["task_id"]
+            assert 0.0 < result["score"] < 1.0
