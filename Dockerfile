@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11.13-slim-bookworm
 
 WORKDIR /app
 
@@ -23,4 +23,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:7860/health || exit 1
 
 CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
-
