@@ -86,3 +86,16 @@ def test_total_reward_stays_inside_open_interval_on_good_path() -> None:
     )
     assert 0.0 < reward.total_reward < 1.0
     assert 0.0 < env.sessions[session_id].cumulative_reward < 1.0
+
+
+def test_rewards_survive_two_decimal_rounding_inside_open_interval() -> None:
+    env = ClinicalTrialEnv()
+    _, session_id, _ = env.reset("task3", seed=44)
+    _, reward, _, _ = env.step(
+        session_id,
+        ScreeningAction(action_type=ActionType.DEFER, confidence_score=0.1),
+    )
+    rounded_reward = float(f"{reward.total_reward:.2f}")
+    rounded_cumulative = float(f"{env.sessions[session_id].cumulative_reward:.2f}")
+    assert 0.0 < rounded_reward < 1.0
+    assert 0.0 < rounded_cumulative < 1.0

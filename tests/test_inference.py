@@ -48,6 +48,15 @@ def test_log_format_strict_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     assert lines[2] == "[END]   success=true steps=3 rewards=0.10,0.20,0.30"
 
 
+def test_logged_rewards_never_round_to_closed_interval_endpoints(capsys: pytest.CaptureFixture[str]) -> None:
+    inference.log_step(1, '{"action_type":"defer"}', 0.0001, False, None)
+    inference.log_end(False, 2, [0.0001, 0.9999])
+    lines = capsys.readouterr().out.strip().splitlines()
+
+    assert "reward=0.01" in lines[0]
+    assert lines[1] == "[END]   success=false steps=2 rewards=0.01,0.99"
+
+
 def test_malformed_model_output_falls_back_to_safe_action() -> None:
     observation = {
         "trial_protocol_summary": {

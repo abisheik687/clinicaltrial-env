@@ -21,7 +21,7 @@ from server.tasks.task_registry import get_task_definition
 class ClinicalTrialEnv:
     """In-memory environment manager with OpenEnv-style methods."""
 
-    SCORE_EPSILON = 1e-4
+    SCORE_EPSILON = 0.01
 
     def __init__(self) -> None:
         settings = get_settings()

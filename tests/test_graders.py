@@ -71,3 +71,19 @@ def test_worst_scores_stay_strictly_above_zero() -> None:
         Task3Grader().grade(truth3, {}, "defer", {"final_eligible": False, "amendment_detected": False, "ambiguity_handled": False, "ignored_amendment": True, "steps_used": 30}),
     ]
     assert all(case["score"] > 0.0 for case in worst_cases)
+
+
+def test_scores_survive_two_decimal_rounding_inside_open_interval() -> None:
+    truth1 = {"INC-001": "met", "INC-002": "met", "INC-003": "not_met", "EXC-001": "not_met", "EXC-002": "met"}
+    truth2 = {**{f"INC-00{i}": "met" for i in range(1, 6)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    truth3 = {**{f"INC-00{i}": "met" for i in range(1, 7)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    scores = [
+        Task1Grader().grade(truth1, {}, "enroll", {"final_eligible": False})["score"],
+        Task1Grader().grade(truth1, truth1.copy(), "enroll", {"final_eligible": True})["score"],
+        Task2Grader().grade(truth2, {}, "enroll", {"final_eligible": False, "drug_interaction_miss": True, "unnecessary_clarifications": 4})["score"],
+        Task2Grader().grade(truth2, truth2.copy(), "enroll", {"final_eligible": True, "drug_interaction_miss": False, "unnecessary_clarifications": 0})["score"],
+        Task3Grader().grade(truth3, {}, "defer", {"final_eligible": False, "amendment_detected": False, "ambiguity_handled": False, "ignored_amendment": True, "steps_used": 30})["score"],
+        Task3Grader().grade(truth3, truth3.copy(), "enroll", {"final_eligible": True, "amendment_detected": True, "ambiguity_handled": True, "ignored_amendment": False, "steps_used": 10})["score"],
+    ]
+    rounded = [float(f"{score:.2f}") for score in scores]
+    assert all(0.0 < value < 1.0 for value in rounded)

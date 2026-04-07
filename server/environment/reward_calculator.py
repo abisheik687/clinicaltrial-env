@@ -10,7 +10,7 @@ from server.models.reward import EnrollmentReward
 class RewardCalculator:
     """Compute step rewards and final episode rewards."""
 
-    SCORE_EPSILON = 1e-4
+    SCORE_EPSILON = 0.01
 
     def __init__(self) -> None:
         self.graders = {"task1": Task1Grader(), "task2": Task2Grader(), "task3": Task3Grader()}

@@ -30,6 +30,8 @@ ENV_BASE_URL = os.environ.get("ENV_URL", "http://localhost:7860")
 BENCHMARK = "clinicaltrial-env"
 SUCCESS_SCORE_THRESHOLD = 0.5
 MAX_REPAIR_ATTEMPTS = 1
+DISPLAY_SCORE_FLOOR = 0.01
+DISPLAY_SCORE_CEILING = 0.99
 ACE_INHIBITORS = {"lisinopril", "enalapril", "ramipril"}
 STEROID_EQUIVALENT = {"prednisone": 1.0, "methylprednisolone": 1.25, "dexamethasone": 6.67}
 
@@ -44,13 +46,22 @@ def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
+def format_logged_reward(reward: float) -> str:
+    safe_reward = min(max(reward, DISPLAY_SCORE_FLOOR), DISPLAY_SCORE_CEILING)
+    return f"{safe_reward:.2f}"
+
+
 def log_step(step: int, action: str, reward: float, done: bool, error: Any) -> None:
     error_str = "null" if error is None else str(error).replace("\n", " ")
-    print(f"[STEP]  step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_str}", flush=True)
+    print(
+        f"[STEP]  step={step} action={action} reward={format_logged_reward(reward)} "
+        f"done={str(done).lower()} error={error_str}",
+        flush=True,
+    )
 
 
 def log_end(success: bool, steps: int, rewards: list[float]) -> None:
-    reward_str = ",".join(f"{reward:.2f}" for reward in rewards)
+    reward_str = ",".join(format_logged_reward(reward) for reward in rewards)
     print(f"[END]   success={str(success).lower()} steps={steps} rewards={reward_str}", flush=True)
 
 

@@ -9,7 +9,7 @@ from typing import Any
 class BaseGrader(ABC):
     """Base class for deterministic episode graders."""
 
-    SCORE_EPSILON = 1e-4
+    SCORE_EPSILON = 0.01
 
     @abstractmethod
     def grade(self, truth: dict[str, str], evaluated: dict[str, str], final_action: str, context: dict[str, Any]) -> dict[str, Any]:
