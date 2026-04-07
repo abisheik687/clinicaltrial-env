@@ -10,6 +10,8 @@ from server.models.reward import EnrollmentReward
 class RewardCalculator:
     """Compute step rewards and final episode rewards."""
 
+    SCORE_EPSILON = 1e-4
+
     def __init__(self) -> None:
         self.graders = {"task1": Task1Grader(), "task2": Task2Grader(), "task3": Task3Grader()}
         self.step_reward_scale = {"task1": 0.10, "task2": 0.125, "task3": 0.15}
@@ -99,10 +101,11 @@ class RewardCalculator:
             penalty += 0.05 * overflow
             partial["step_overflow_penalty"] = round(-0.05 * overflow, 4)
 
-        normalized = max(min((raw_sum - penalty) / self.max_possible[state.task_id], 1.0), 0.0)
+        normalized = self._clamp_open_unit_interval((raw_sum - penalty) / self.max_possible[state.task_id])
+        eligibility_accuracy = self._clamp_open_unit_interval(eligibility_accuracy)
         return EnrollmentReward(
             total_reward=round(normalized, 4),
-            eligibility_accuracy=round(min(max(eligibility_accuracy, 0.0), 1.0), 4),
+            eligibility_accuracy=round(eligibility_accuracy, 4),
             efficiency_bonus=round(min(max(efficiency_bonus, 0.0), 0.3), 4),
             penalty=round(min(max(penalty, 0.0), 1.0), 4),
             partial_credit={key: round(value, 4) for key, value in partial.items()},
@@ -127,3 +130,6 @@ class RewardCalculator:
         if "clarification_certainty" in hidden:
             return hidden["clarification_certainty"]
         return "confirmed"
+
+    def _clamp_open_unit_interval(self, value: float) -> float:
+        return min(max(value, self.SCORE_EPSILON), 1.0 - self.SCORE_EPSILON)

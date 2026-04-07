@@ -21,6 +21,8 @@ from server.tasks.task_registry import get_task_definition
 class ClinicalTrialEnv:
     """In-memory environment manager with OpenEnv-style methods."""
 
+    SCORE_EPSILON = 1e-4
+
     def __init__(self) -> None:
         settings = get_settings()
         protocol_dir = Path(__file__).resolve().parents[2] / "protocols"
@@ -97,7 +99,10 @@ class ClinicalTrialEnv:
         amendment_notice = self.state_machine.maybe_inject_amendment(state)
         info.update(amendment_notice)
         reward = self.reward_calculator.compute(state, action, info)
-        state.cumulative_reward = round(min(state.cumulative_reward + reward.total_reward, 1.0), 4)
+        state.cumulative_reward = round(
+            self._clamp_open_unit_interval(state.cumulative_reward + reward.total_reward),
+            4,
+        )
         self.episode_manager.touch(session_id)
         return state.patient.model_copy(deep=True), reward, state.done, info
 
@@ -132,3 +137,6 @@ class ClinicalTrialEnv:
                 raise HTTPException(status_code=400, detail="Unknown clarification_target")
         if action.action_type in {ActionType.ENROLL, ActionType.EXCLUDE} and len(state.evaluated_criteria) == 0:
             raise HTTPException(status_code=400, detail="Must evaluate criteria before final decision")
+
+    def _clamp_open_unit_interval(self, value: float) -> float:
+        return min(max(value, self.SCORE_EPSILON), 1.0 - self.SCORE_EPSILON)

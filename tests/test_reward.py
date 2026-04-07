@@ -46,3 +46,43 @@ def test_final_defer_penalty() -> None:
     assert done is True
     assert reward.penalty >= 0.20
 
+
+def test_total_reward_stays_inside_open_interval_on_bad_path() -> None:
+    env = ClinicalTrialEnv()
+    _, session_id, _ = env.reset("task3", seed=44)
+    _, reward, _, _ = env.step(
+        session_id,
+        ScreeningAction(action_type=ActionType.DEFER, confidence_score=0.1),
+    )
+    assert 0.0 < reward.total_reward < 1.0
+
+
+def test_total_reward_stays_inside_open_interval_on_good_path() -> None:
+    env = ClinicalTrialEnv()
+    _, session_id, _ = env.reset("task1", seed=42)
+    truth = env.sessions[session_id].__dict__["hidden_case"]["criterion_truth"]
+    for criterion_id, verdict in truth.items():
+        env.step(
+            session_id,
+            ScreeningAction(
+                action_type=ActionType.EVALUATE_CRITERION,
+                criterion_id=criterion_id,
+                evaluation=CriterionEvaluation(
+                    criterion_id=criterion_id,
+                    verdict=verdict,
+                    reasoning=f"Strict interval reward test for {criterion_id} with detailed reasoning.",
+                ),
+                confidence_score=0.95,
+            ),
+        )
+    final_action = "enroll" if env.sessions[session_id].__dict__["hidden_case"]["final_eligible"] else "exclude"
+    _, reward, _, _ = env.step(
+        session_id,
+        ScreeningAction(
+            action_type=ActionType(final_action),
+            final_decision_reason="Completing a deterministic positive-path reward test.",
+            confidence_score=0.99,
+        ),
+    )
+    assert 0.0 < reward.total_reward < 1.0
+    assert 0.0 < env.sessions[session_id].cumulative_reward < 1.0
