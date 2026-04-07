@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+from .score_serialization import serialize_open_interval_mapping, serialize_open_interval_score
 
 
 class EnrollmentReward(BaseModel):
@@ -18,3 +20,10 @@ class EnrollmentReward(BaseModel):
     grader_feedback: str
     is_final: bool
 
+    @field_serializer("total_reward", "eligibility_accuracy", "efficiency_bonus", "penalty")
+    def serialize_score_fields(self, value: float) -> float:
+        return serialize_open_interval_score(value)
+
+    @field_serializer("partial_credit")
+    def serialize_partial_credit(self, value: dict[str, float]) -> dict[str, float]:
+        return serialize_open_interval_mapping(value)

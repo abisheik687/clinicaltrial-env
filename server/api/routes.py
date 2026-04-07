@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from server.environment.env import ClinicalTrialEnv
 from server.models.action import ScreeningAction
+from server.models.score_serialization import serialize_nested_scores
 from server.tasks.task_registry import TASKS
 
 
@@ -49,7 +50,7 @@ def reset(request: ResetRequest | None = Body(default=None)) -> dict:
 @router.post("/step")
 def step(request: StepRequest) -> dict:
     observation, reward, done, info = env.step(request.session_id, request.action)
-    return {"observation": observation.model_dump(), "reward": reward.model_dump(), "done": done, "info": info}
+    return {"observation": observation.model_dump(), "reward": reward.model_dump(), "done": done, "info": serialize_nested_scores(info)}
 
 
 @router.get("/state")

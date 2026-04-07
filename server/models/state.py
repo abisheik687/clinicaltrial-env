@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from .observation import PatientObservation
+from .score_serialization import serialize_open_interval_score
 
 
 class TrialState(BaseModel):
@@ -27,3 +28,7 @@ class TrialState(BaseModel):
     cumulative_reward: float = 0.0
     done: bool = False
     termination_reason: Optional[str] = None
+
+    @field_serializer("cumulative_reward")
+    def serialize_cumulative_reward(self, value: float) -> float:
+        return serialize_open_interval_score(value)

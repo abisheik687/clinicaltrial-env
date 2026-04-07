@@ -99,3 +99,25 @@ def test_rewards_survive_two_decimal_rounding_inside_open_interval() -> None:
     rounded_cumulative = float(f"{env.sessions[session_id].cumulative_reward:.2f}")
     assert 0.0 < rounded_reward < 1.0
     assert 0.0 < rounded_cumulative < 1.0
+
+
+def test_reward_model_dump_filters_closed_interval_secondary_fields() -> None:
+    env = ClinicalTrialEnv()
+    _, session_id, _ = env.reset("task3", seed=44)
+    _, reward, _, _ = env.step(
+        session_id,
+        ScreeningAction(action_type=ActionType.DEFER, confidence_score=0.1),
+    )
+    payload = reward.model_dump()
+    assert 0.0 < payload["total_reward"] < 1.0
+    assert 0.0 < payload["eligibility_accuracy"] < 1.0
+    assert 0.0 < payload["efficiency_bonus"] < 1.0
+    assert 0.0 < payload["penalty"] < 1.0
+    assert all(0.0 < value < 1.0 for value in payload["partial_credit"].values())
+
+
+def test_state_model_dump_serializes_reset_cumulative_reward_inside_open_interval() -> None:
+    env = ClinicalTrialEnv()
+    _, session_id, _ = env.reset("task1", seed=42)
+    payload = env.state(session_id).model_dump()
+    assert 0.0 < payload["cumulative_reward"] < 1.0

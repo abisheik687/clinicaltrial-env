@@ -69,7 +69,12 @@ def test_step_endpoint_valid_action() -> None:
         },
     )
     assert response.status_code == 200
-    assert 0.0 <= response.json()["reward"]["total_reward"] <= 1.0
+    reward = response.json()["reward"]
+    assert 0.0 < reward["total_reward"] < 1.0
+    assert 0.0 < reward["eligibility_accuracy"] < 1.0
+    assert 0.0 < reward["efficiency_bonus"] < 1.0
+    assert 0.0 < reward["penalty"] < 1.0
+    assert all(0.0 < value < 1.0 for value in reward["partial_credit"].values())
 
 
 def test_step_endpoint_invalid_session() -> None:
@@ -88,6 +93,7 @@ def test_state_endpoint() -> None:
     response = client.get("/state", params={"session_id": reset["session_id"]})
     assert response.status_code == 200
     assert response.json()["task_id"] == "task2"
+    assert 0.0 < response.json()["cumulative_reward"] < 1.0
 
 
 def test_complete_task1_episode() -> None:
@@ -126,3 +132,9 @@ def test_complete_task1_episode() -> None:
     )
     assert final.status_code == 200
     assert final.json()["done"] is True
+    reward = final.json()["reward"]
+    assert 0.0 < reward["total_reward"] < 1.0
+    assert 0.0 < reward["eligibility_accuracy"] < 1.0
+    assert 0.0 < reward["efficiency_bonus"] < 1.0
+    assert 0.0 < reward["penalty"] < 1.0
+    assert all(0.0 < value < 1.0 for value in reward["partial_credit"].values())
