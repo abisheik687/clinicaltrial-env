@@ -22,7 +22,7 @@ class Task3Grader(BaseGrader):
             penalty += 0.2
         if context.get("ignored_amendment"):
             penalty += 0.15
-        score = min(max(score - penalty, 0.0), 1.0)
+        score = self.clamp_open_unit_interval(score - penalty)
         return {
             "score": round(score, 4),
             "partial_credit": {criterion: round(0.4 / len(truth), 4) if evaluated.get(criterion) == truth[criterion] else 0.0 for criterion in truth},

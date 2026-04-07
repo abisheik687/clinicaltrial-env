@@ -46,5 +46,28 @@ def test_grader_scores_in_valid_range() -> None:
         Task2Grader().grade(truth2, {}, "exclude", {"final_eligible": False, "drug_interaction_miss": True, "unnecessary_clarifications": 2}),
         Task3Grader().grade(truth3, {}, "defer", {"final_eligible": True, "amendment_detected": False, "ambiguity_handled": False, "ignored_amendment": True, "steps_used": 25}),
     ]
-    assert all(0.0 <= case["score"] <= 1.0 for case in cases)
+    assert all(0.0 < case["score"] < 1.0 for case in cases)
 
+
+def test_perfect_scores_stay_strictly_below_one() -> None:
+    truth1 = {"INC-001": "met", "INC-002": "met", "INC-003": "met", "EXC-001": "not_met", "EXC-002": "not_met"}
+    truth2 = {**{f"INC-00{i}": "met" for i in range(1, 6)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    truth3 = {**{f"INC-00{i}": "met" for i in range(1, 7)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    perfect_cases = [
+        Task1Grader().grade(truth1, truth1.copy(), "enroll", {"final_eligible": True}),
+        Task2Grader().grade(truth2, truth2.copy(), "enroll", {"final_eligible": True, "drug_interaction_miss": False, "unnecessary_clarifications": 0}),
+        Task3Grader().grade(truth3, truth3.copy(), "enroll", {"final_eligible": True, "amendment_detected": True, "ambiguity_handled": True, "ignored_amendment": False, "steps_used": 10}),
+    ]
+    assert all(case["score"] < 1.0 for case in perfect_cases)
+
+
+def test_worst_scores_stay_strictly_above_zero() -> None:
+    truth1 = {"INC-001": "met", "INC-002": "met", "INC-003": "not_met", "EXC-001": "not_met", "EXC-002": "met"}
+    truth2 = {**{f"INC-00{i}": "met" for i in range(1, 6)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    truth3 = {**{f"INC-00{i}": "met" for i in range(1, 7)}, **{f"EXC-00{i}": "not_met" for i in range(1, 5)}}
+    worst_cases = [
+        Task1Grader().grade(truth1, {}, "enroll", {"final_eligible": False}),
+        Task2Grader().grade(truth2, {}, "enroll", {"final_eligible": False, "drug_interaction_miss": True, "unnecessary_clarifications": 4}),
+        Task3Grader().grade(truth3, {}, "defer", {"final_eligible": False, "amendment_detected": False, "ambiguity_handled": False, "ignored_amendment": True, "steps_used": 30}),
+    ]
+    assert all(case["score"] > 0.0 for case in worst_cases)

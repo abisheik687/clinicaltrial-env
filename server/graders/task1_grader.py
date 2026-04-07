@@ -16,8 +16,7 @@ class Task1Grader(BaseGrader):
             score = min(score, 0.5)
         partial = {criterion: 0.12 if evaluated.get(criterion) == truth[criterion] else 0.0 for criterion in criteria}
         return {
-            "score": round(min(max(score, 0.0), 1.0), 4),
+            "score": round(self.clamp_open_unit_interval(score), 4),
             "partial_credit": partial,
             "feedback": f"Correct evaluations: {correct}/5. Final decision correct: {bool(final_correct)}.",
         }
-

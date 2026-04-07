@@ -28,10 +28,9 @@ class Task2Grader(BaseGrader):
         if context.get("drug_interaction_miss"):
             penalty += 0.1
         penalty += 0.05 * int(context.get("unnecessary_clarifications", 0))
-        score = min(max(score - penalty, 0.0), 1.0)
+        score = self.clamp_open_unit_interval(score - penalty)
         return {
             "score": round(score, 4),
             "partial_credit": partial,
             "feedback": f"Weighted score with penalty {penalty:.2f}; final decision correct: {bool(final_correct)}.",
         }
-
