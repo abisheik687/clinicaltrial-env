@@ -24,6 +24,7 @@ def test_root_landing_page() -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "ClinicalTrialEnv" in response.text
+    assert "Clinical Trial Operations Arena" in response.text
 
 
 def test_reset_endpoint_task1() -> None:
@@ -70,11 +71,10 @@ def test_step_endpoint_valid_action() -> None:
     )
     assert response.status_code == 200
     reward = response.json()["reward"]
-    assert 0.0 < reward["total_reward"] < 1.0
-    assert 0.0 < reward["eligibility_accuracy"] < 1.0
-    assert 0.0 < reward["efficiency_bonus"] < 1.0
-    assert 0.0 < reward["penalty"] < 1.0
-    assert all(0.0 < value < 1.0 for value in reward["partial_credit"].values())
+    assert reward["total_reward"] == 0.0
+    assert reward["terminal_success"] is False
+    assert reward["unsafe_action"] is False
+    assert reward["diagnostic_metrics"]["criterion_evaluation_accuracy"] == 1.0
 
 
 def test_step_endpoint_invalid_session() -> None:
@@ -93,7 +93,7 @@ def test_state_endpoint() -> None:
     response = client.get("/state", params={"session_id": reset["session_id"]})
     assert response.status_code == 200
     assert response.json()["task_id"] == "task2"
-    assert 0.0 < response.json()["cumulative_reward"] < 1.0
+    assert response.json()["cumulative_reward"] == 0.0
 
 
 def test_complete_task1_episode() -> None:
@@ -133,8 +133,115 @@ def test_complete_task1_episode() -> None:
     assert final.status_code == 200
     assert final.json()["done"] is True
     reward = final.json()["reward"]
-    assert 0.0 < reward["total_reward"] < 1.0
-    assert 0.0 < reward["eligibility_accuracy"] < 1.0
-    assert 0.0 < reward["efficiency_bonus"] < 1.0
-    assert 0.0 < reward["penalty"] < 1.0
-    assert all(0.0 < value < 1.0 for value in reward["partial_credit"].values())
+    assert reward["total_reward"] == 1.0
+    assert reward["terminal_success"] is True
+    assert reward["unsafe_action"] is False
+
+
+def test_task3_workflow_api_walkthrough() -> None:
+    reset = client.post("/reset", json={"task_id": "task3", "seed": 44}).json()
+    session_id = reset["session_id"]
+    truth = env.sessions[session_id].__dict__["hidden_case"]["criterion_truth"]
+
+    for criterion_id in ["INC-001", "INC-002", "INC-003"]:
+        response = client.post(
+            "/step",
+            json={
+                "session_id": session_id,
+                "action": {
+                    "action_type": "evaluate_criterion",
+                    "criterion_id": criterion_id,
+                    "evaluation": {
+                        "criterion_id": criterion_id,
+                        "verdict": truth[criterion_id],
+                        "reasoning": f"Task3 workflow evaluation for {criterion_id}.",
+                    },
+                    "confidence_score": 0.92,
+                },
+            },
+        )
+        assert response.status_code == 200
+
+    assert env.sessions[session_id].amendment_injected is True
+
+    response = client.post(
+        "/step",
+        json={
+            "session_id": session_id,
+            "action": {
+                "action_type": "evaluate_criterion",
+                "criterion_id": "INC-003",
+                "evaluation": {
+                    "criterion_id": "INC-003",
+                    "verdict": env.sessions[session_id].__dict__["hidden_case"]["meta"]["post_amendment_truth"],
+                    "reasoning": "Re-checked after amendment.",
+                },
+                "confidence_score": 0.95,
+            },
+        },
+    )
+    assert response.status_code == 200
+
+    for criterion_id in ["INC-004", "INC-005", "INC-006", "EXC-001", "EXC-002", "EXC-003", "EXC-004"]:
+        response = client.post(
+            "/step",
+            json={
+                "session_id": session_id,
+                "action": {
+                    "action_type": "evaluate_criterion",
+                    "criterion_id": criterion_id,
+                    "evaluation": {
+                        "criterion_id": criterion_id,
+                        "verdict": truth[criterion_id],
+                        "reasoning": f"Task3 workflow evaluation for {criterion_id}.",
+                    },
+                    "confidence_score": 0.9,
+                },
+            },
+        )
+        assert response.status_code == 200
+
+    enroll = client.post(
+        "/step",
+        json={
+            "session_id": session_id,
+            "action": {
+                "action_type": "enroll",
+                "final_decision_reason": "Safe enroll before scheduling.",
+                "confidence_score": 0.95,
+            },
+        },
+    )
+    assert enroll.status_code == 200
+    assert enroll.json()["done"] is False
+
+    schedule = client.post(
+        "/step",
+        json={
+            "session_id": session_id,
+            "action": {
+                "action_type": "schedule_followup",
+                "followup_day": 8,
+                "confidence_score": 0.8,
+            },
+        },
+    )
+    assert schedule.status_code == 200
+    assert schedule.json()["done"] is False
+
+    safety = client.post(
+        "/step",
+        json={
+            "session_id": session_id,
+            "action": {
+                "action_type": "handle_safety_event",
+                "safety_response": "escalate",
+                "confidence_score": 0.88,
+            },
+        },
+    )
+    assert safety.status_code == 200
+    assert safety.json()["done"] is True
+    reward = safety.json()["reward"]
+    assert reward["terminal_success"] is True
+    assert reward["diagnostic_metrics"]["safety_component_score"] == 1.0

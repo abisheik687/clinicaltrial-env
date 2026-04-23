@@ -18,6 +18,7 @@ from server.models.observation import (
     Diagnosis,
     LabValue,
     Medication,
+    OperationalState,
     PatientObservation,
     TrialProtocolSummary,
 )
@@ -385,10 +386,21 @@ class PatientGenerator:
             },
             "current_medications": [med.model_dump() for med in self._make_meds(rng, 2, 5, COMMON_MEDS + SEIZURE_MEDS)],
             "trial_protocol_summary": self._protocol_summary(protocol, {"INC-002", "INC-003", "EXC-001"}, {"INC-003", "EXC-001", "EXC-002"}).model_dump(),
+            "operational_state": OperationalState(
+                workflow_phase="screening",
+                followup_window_start=7,
+                followup_window_end=10,
+                scheduled_followup_day=None,
+                amendment_review_required=False,
+                safety_event_active=False,
+                safety_event_description=None,
+                required_safety_action="escalate",
+                safety_response=None,
+            ).model_dump(),
             "step_number": 0,
             "steps_remaining": 20,
             "previous_actions": [],
-            "info_message": "Watch for ambiguous criteria and possible protocol changes.",
+            "info_message": "Screen the patient first. After safe enrollment, schedule a follow-up visit for day 7 to 10 and handle any safety alert.",
         }
         final_eligible = all(truth[key] == "met" for key in ("INC-001", "INC-002", "INC-003", "INC-004", "INC-005", "INC-006")) and all(
             truth[key] == "not_met" for key in ("EXC-001", "EXC-002", "EXC-003", "EXC-004")
@@ -405,6 +417,10 @@ class PatientGenerator:
                 "severity_actual": round(severity_actual, 1),
                 "pre_amendment_truth": truth["INC-003"],
                 "post_amendment_truth": "met" if 10 <= severity_actual <= 36 else "not_met",
+                "followup_window_start": 7,
+                "followup_window_end": 10,
+                "required_safety_action": "escalate",
+                "safety_event_description": "Patient reports new seizure symptoms before the scheduled follow-up visit.",
             },
         )
 

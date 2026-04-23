@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClinicalTrialEnv Demo</title>
+  <style>
+    :root {
+      --bg: #f3f7fb;
+      --panel: #ffffff;
+      --line: #d9e3ef;
+      --line-strong: #b6c7da;
+      --ink: #18324b;
+      --muted: #5e7288;
+      --accent: #2b6cb0;
+      --accent-soft: #e9f3ff;
+      --good: #dff7e8;
+      --good-ink: #17603a;
+      --warn: #fff6cc;
+      --warn-line: #e0b600;
+      --danger: #fde5e5;
+      --danger-ink: #a12d2d;
+      --neutral: #edf1f6;
+      --shadow: 0 10px 26px rgba(24, 50, 75, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: linear-gradient(180deg, #f8fbfe 0%, var(--bg) 100%);
+      color: var(--ink);
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px 24px 28px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .title h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+    }
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr 1.25fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      min-height: 760px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel.protocol.amendment {
+      border: 2px solid var(--warn-line);
+      box-shadow: 0 0 0 4px rgba(224, 182, 0, 0.15), var(--shadow);
+    }
+    .panel-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fcfdff 0%, #f7fafe 100%);
+    }
+    .panel-header h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+    .panel-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .panel-body {
+      padding: 16px 18px 18px;
+      overflow: auto;
+      flex: 1;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .meta-card {
+      border: 1px solid var(--line);
+      background: #fbfdff;
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .meta-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .meta-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .section {
+      margin-top: 18px;
+    }
+    .section h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+    .item.flagged {
+      border-color: #f2be68;
+      background: #fff8ea;
+    }
+    .item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-right: 6px;
+      margin-top: 6px;
+    }
+    .badge.info {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .badge.warn {
+      background: #fff1c2;
+      color: #936700;
+    }
+    .badge.bad {
+      background: #fde5e5;
+      color: var(--danger-ink);
+    }
+    .criterion {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+      margin-bottom: 10px;
+    }
+    .criterion p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+    .warning-box {
+      margin-top: 14px;
+      border: 2px solid var(--warn-line);
+      border-radius: 14px;
+      background: var(--warn);
+      padding: 14px;
+      color: #6f5700;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    button {
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(24, 50, 75, 0.08);
+      border-color: #90b4d7;
+    }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    button.danger {
+      background: #fff4f4;
+      border-color: #efc1c1;
+      color: #8d2f2f;
+    }
+    button.ghost {
+      background: #f7fbff;
+      color: var(--accent);
+      border-color: #bfd4ee;
+    }
+    select, textarea, input {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+    .control-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfdff;
+      margin-bottom: 14px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .status-row:last-child {
+      margin-bottom: 0;
+    }
+    .log {
+      display: grid;
+      gap: 10px;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .log-entry {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+    .log-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+    .reward-pill {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .banner {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-weight: 700;
+      display: none;
+    }
+    .banner.show {
+      display: block;
+    }
+    .banner.correct {
+      background: var(--good);
+      color: var(--good-ink);
+      border: 1px solid #abd8bf;
+    }
+    .banner.unsafe {
+      background: var(--danger);
+      color: var(--danger-ink);
+      border: 1px solid #e1aaaa;
+    }
+    .banner.incorrect {
+      background: var(--neutral);
+      color: #4b5d70;
+      border: 1px solid #cad6e1;
+    }
+    .muted-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+    .footer-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title">
+        <h1>Clinical Trial Operations Arena</h1>
+        <p>Interactive demo for the AI training environment. Fixed to Task 3 with seed 44 so the full screening, scheduling, and safety workflow stays reproducible for mentor and judge walkthroughs.</p>
+      </div>
+      <div class="top-actions">
+        <button class="ghost" id="resetButton">Reset Demo Episode</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Patient Record</h2>
+          <p>Visible patient evidence the agent can use right now.</p>
+        </div>
+        <div class="panel-body" id="patientPanel"></div>
+      </section>
+
+      <section class="panel protocol" id="protocolPanel">
+        <div class="panel-header">
+          <h2>Protocol Rules</h2>
+          <p>Inclusion, exclusion, protocol version, and amendment state.</p>
+        </div>
+        <div class="panel-body" id="protocolBody"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Action Console</h2>
+          <p>Drive the environment step by step and watch the verifier rewards.</p>
+        </div>
+        <div class="panel-body">
+          <div class="status-box">
+            <div class="status-row"><span>Session</span><strong id="sessionId">Not started</strong></div>
+            <div class="status-row"><span>Total reward</span><strong id="totalReward">0.00</strong></div>
+            <div class="status-row"><span>Episode status</span><strong id="episodeStatus">Loading</strong></div>
+            <div class="status-row"><span>Current step</span><strong id="stepMeta">0 / 20</strong></div>
+          </div>
+
+          <div class="controls">
+            <div class="button-grid">
+              <button id="inspectPatientButton">Inspect Patient</button>
+              <button id="inspectProtocolButton">Inspect Protocol</button>
+              <button class="primary" id="evaluateButton">Evaluate Criterion</button>
+              <button id="clarifyButton">Request Clarification</button>
+              <button class="primary" id="enrollButton">Enroll</button>
+              <button class="danger" id="excludeButton">Exclude</button>
+              <button class="ghost" id="scheduleFollowupButton">Schedule Follow-Up</button>
+              <button class="ghost" id="handleSafetyButton">Handle Safety Event</button>
+              <button id="deferButton">Defer</button>
+            </div>
+
+            <div class="control-group">
+              <label for="criterionSelect">Criterion</label>
+              <select id="criterionSelect"></select>
+            </div>
+
+            <div class="control-group">
+              <label for="verdictSelect">Verdict</label>
+              <select id="verdictSelect">
+                <option value="met">met</option>
+                <option value="not_met">not_met</option>
+                <option value="uncertain">uncertain</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="clarificationSelect">Clarification target</label>
+              <select id="clarificationSelect"></select>
+            </div>
+
+            <div class="control-group">
+              <label for="followupDayInput">Follow-up day</label>
+              <input id="followupDayInput" type="number" min="1" max="30" value="8">
+            </div>
+
+            <div class="control-group">
+              <label for="safetyResponseSelect">Safety response</label>
+              <select id="safetyResponseSelect">
+                <option value="escalate">escalate</option>
+                <option value="reschedule">reschedule</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="rescheduleDayInput">Reschedule day</label>
+              <input id="rescheduleDayInput" type="number" min="1" max="30" value="9">
+            </div>
+
+            <div class="control-group">
+              <label for="reasoningInput">Reasoning / decision note</label>
+              <textarea id="reasoningInput">Patient age is within the permitted range based on the visible demographics.</textarea>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>Action Log</h3>
+            <div class="log" id="actionLog"></div>
+          </div>
+
+          <div id="finalBanner" class="banner"></div>
+          <div class="footer-note">API base URL is hardcoded to <code>http://127.0.0.1:7860</code> below for easy HF Space replacement.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Easy to change for Hugging Face Space deployment.
+    const API_BASE_URL = 'http://127.0.0.1:7860';
+    const DEMO_TASK_ID = 'task3';
+    const DEMO_SEED = 44;
+
+    let sessionId = null;
+    let currentObservation = null;
+    let totalReward = 0;
+    let done = false;
+    let actionCount = 0;
+
+    const patientPanel = document.getElementById('patientPanel');
+    const protocolPanel = document.getElementById('protocolPanel');
+    const protocolBody = document.getElementById('protocolBody');
+    const actionLog = document.getElementById('actionLog');
+    const finalBanner = document.getElementById('finalBanner');
+    const sessionIdEl = document.getElementById('sessionId');
+    const totalRewardEl = document.getElementById('totalReward');
+    const episodeStatusEl = document.getElementById('episodeStatus');
+    const stepMetaEl = document.getElementById('stepMeta');
+    const criterionSelect = document.getElementById('criterionSelect');
+    const clarificationSelect = document.getElementById('clarificationSelect');
+    const verdictSelect = document.getElementById('verdictSelect');
+    const followupDayInput = document.getElementById('followupDayInput');
+    const safetyResponseSelect = document.getElementById('safetyResponseSelect');
+    const rescheduleDayInput = document.getElementById('rescheduleDayInput');
+    const reasoningInput = document.getElementById('reasoningInput');
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function formatNumber(value) {
+      return Number(value).toFixed(2);
+    }
+
+    function logEntry(title, rewardValue, detail, feedback) {
+      actionCount += 1;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'log-entry';
+      wrapper.innerHTML = `
+        <div class="log-top">
+          <strong>${escapeHtml(actionCount + '. ' + title)}</strong>
+          <span class="reward-pill">Reward ${formatNumber(rewardValue)}</span>
+        </div>
+        <div class="subtle">${escapeHtml(detail)}</div>
+        <div class="muted-note">${escapeHtml(feedback || '')}</div>
+      `;
+      actionLog.prepend(wrapper);
+    }
+
+    function renderPatient(observation) {
+      const operationalState = observation.operational_state || null;
+      const labs = Object.entries(observation.lab_values).map(([name, lab]) => {
+        const badges = [];
+        if (lab.certainty !== 'confirmed') badges.push(`<span class="badge warn">${escapeHtml(lab.certainty)}</span>`);
+        if (lab.is_abnormal) badges.push('<span class="badge bad">flagged</span>');
+        return `
+          <div class="item ${lab.is_abnormal || lab.certainty !== 'confirmed' ? 'flagged' : ''}">
+            <strong>${escapeHtml(name)}</strong>
+            <div>${escapeHtml(lab.value)} ${escapeHtml(lab.unit)}</div>
+            <div class="subtle">Reference ${escapeHtml(lab.reference_range[0])} to ${escapeHtml(lab.reference_range[1])}</div>
+            ${badges.join('')}
+          </div>
+        `;
+      }).join('');
+
+      const medications = observation.current_medications.map((med) => `
+        <div class="item ${med.is_contraindicated ? 'flagged' : ''}">
+          <strong>${escapeHtml(med.name)}</strong>
+          <div>${escapeHtml(med.dose_mg)} mg · ${escapeHtml(med.frequency)}</div>
+          ${med.is_contraindicated === true ? '<span class="badge bad">contraindicated</span>' : ''}
+        </div>
+      `).join('');
+
+      const operationsPanel = operationalState ? `
+        <div class="section">
+          <h3>Operations State</h3>
+          <div class="list">
+            <div class="item">
+              <strong>Workflow phase</strong>
+              <div>${escapeHtml(operationalState.workflow_phase)}</div>
+              ${operationalState.amendment_review_required ? '<span class="badge warn">amendment re-check required</span>' : ''}
+              ${operationalState.safety_event_active ? '<span class="badge bad">safety event active</span>' : ''}
+            </div>
+            <div class="item">
+              <strong>Follow-up window</strong>
+              <div>Day ${escapeHtml(operationalState.followup_window_start ?? '—')} to ${escapeHtml(operationalState.followup_window_end ?? '—')}</div>
+              <div class="subtle">Scheduled day: ${escapeHtml(operationalState.scheduled_followup_day ?? 'not scheduled')}</div>
+            </div>
+            <div class="item ${operationalState.safety_event_active ? 'flagged' : ''}">
+              <strong>Safety event</strong>
+              <div class="subtle">${escapeHtml(operationalState.safety_event_description || 'No active safety event.')}</div>
+              <div class="muted-note">Required response: ${escapeHtml(operationalState.required_safety_action || 'n/a')}</div>
+              <div class="muted-note">Recorded response: ${escapeHtml(operationalState.safety_response || 'none')}</div>
+            </div>
+          </div>
+        </div>
+      ` : '';
+
+      patientPanel.innerHTML = `
+        <div class="meta-grid">
+          <div class="meta-card">
+            <span class="meta-label">Patient ID</span>
+            <div class="meta-value">${escapeHtml(observation.patient_id.slice(0, 8))}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Diagnosis</span>
+            <div class="meta-value">${escapeHtml(observation.diagnosis.primary_condition)}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Age / Sex</span>
+            <div class="meta-value">${escapeHtml(observation.demographics.age)} · ${escapeHtml(observation.demographics.sex)}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">BMI</span>
+            <div class="meta-value">${escapeHtml(observation.demographics.bmi)}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Case Snapshot</h3>
+          <div class="item">
+            <strong>${escapeHtml(observation.diagnosis.primary_condition)}</strong>
+            <div class="subtle">ICD-10 ${escapeHtml(observation.diagnosis.icd10_code)} · diagnosed ${escapeHtml(observation.diagnosis.diagnosis_date)}</div>
+            <div class="muted-note">${escapeHtml(observation.info_message || 'No active note.')}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Lab Values</h3>
+          <div class="list">${labs}</div>
+        </div>
+
+        <div class="section">
+          <h3>Medication List</h3>
+          <div class="list">${medications || '<div class="subtle">No active medications listed.</div>'}</div>
+        </div>
+
+        ${operationsPanel}
+      `;
+    }
+
+    function renderProtocol(observation) {
+      const protocol = observation.trial_protocol_summary;
+      const renderCriteria = (criteria, title) => `
+        <div class="section">
+          <h3>${escapeHtml(title)}</h3>
+          ${criteria.map((criterion) => `
+            <div class="criterion">
+              <strong>${escapeHtml(criterion.criterion_id)}</strong>
+              ${criterion.is_ambiguous ? '<span class="badge warn">ambiguous</span>' : '<span class="badge info">clear</span>'}
+              ${criterion.clarification_available ? '<span class="badge info">clarifiable</span>' : ''}
+              <p>${escapeHtml(criterion.description)}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      protocolPanel.classList.toggle('amendment', Boolean(protocol.amendment_active));
+      protocolBody.innerHTML = `
+        <div class="meta-grid">
+          <div class="meta-card">
+            <span class="meta-label">Trial</span>
+            <div class="meta-value">${escapeHtml(protocol.trial_id)}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Phase</span>
+            <div class="meta-value">${escapeHtml(protocol.phase)}</div>
+          </div>
+          <div class="meta-card" style="grid-column: 1 / -1;">
+            <span class="meta-label">Protocol title</span>
+            <div class="meta-value">${escapeHtml(protocol.title)}</div>
+          </div>
+        </div>
+        ${protocol.amendment_active ? `<div class="warning-box">Amendment fired: ${escapeHtml(protocol.amendment_description || 'Protocol change detected.')}</div>` : ''}
+        ${renderCriteria(protocol.inclusion_criteria, 'Inclusion Criteria')}
+        ${renderCriteria(protocol.exclusion_criteria, 'Exclusion Criteria')}
+      `;
+    }
+
+    function populateSelectors(observation) {
+      const protocol = observation.trial_protocol_summary;
+      const criteria = [...protocol.inclusion_criteria, ...protocol.exclusion_criteria];
+      const criterionOptions = criteria.map((criterion) => `<option value="${escapeHtml(criterion.criterion_id)}">${escapeHtml(criterion.criterion_id)} — ${escapeHtml(criterion.description)}</option>`).join('');
+      const clarificationOptions = criteria
+        .filter((criterion) => criterion.clarification_available)
+        .map((criterion) => `<option value="${escapeHtml(criterion.criterion_id)}">${escapeHtml(criterion.criterion_id)} — clarification</option>`)
+        .join('');
+
+      criterionSelect.innerHTML = criterionOptions;
+      clarificationSelect.innerHTML = clarificationOptions || '<option value="">No clarifiable criteria available</option>';
+    }
+
+    function renderStatus(observation) {
+      sessionIdEl.textContent = sessionId || 'Not started';
+      totalRewardEl.textContent = formatNumber(totalReward);
+      episodeStatusEl.textContent = done ? 'Completed' : 'In progress';
+      stepMetaEl.textContent = `${observation.step_number} / ${observation.step_number + observation.steps_remaining}`;
+    }
+
+    function showFinalBanner(reward) {
+      if (!done) {
+        finalBanner.className = 'banner';
+        finalBanner.textContent = '';
+        return;
+      }
+
+      let mode = 'incorrect';
+      let label = 'Episode ended: incorrect or unresolved final decision.';
+      if (reward.unsafe_action) {
+        mode = 'unsafe';
+        label = `Unsafe final outcome. Reward ${formatNumber(reward.total_reward)}.`;
+      } else if (reward.terminal_success) {
+        mode = 'correct';
+        label = `Correct safe final outcome. Reward ${formatNumber(reward.total_reward)}.`;
+      } else {
+        label = `Episode ended without a correct safe resolution. Reward ${formatNumber(reward.total_reward)}.`;
+      }
+
+      finalBanner.className = `banner show ${mode}`;
+      finalBanner.textContent = `${label} ${reward.verifier_feedback}`;
+    }
+
+    async function callApi(path, options = {}) {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    async function resetDemo() {
+      const payload = await callApi('/reset', {
+        method: 'POST',
+        body: JSON.stringify({ task_id: DEMO_TASK_ID, seed: DEMO_SEED }),
+      });
+      sessionId = payload.session_id;
+      currentObservation = payload.observation;
+      totalReward = 0;
+      done = false;
+      actionCount = 0;
+      actionLog.innerHTML = '';
+      renderPatient(currentObservation);
+      renderProtocol(currentObservation);
+      populateSelectors(currentObservation);
+      renderStatus(currentObservation);
+      showFinalBanner({ total_reward: 0, unsafe_action: false, terminal_success: false, verifier_feedback: '' });
+      logEntry('Episode reset', 0, `Started ${payload.task_info.name} with seed ${DEMO_SEED}.`, 'Ready for action.');
+    }
+
+    async function runAction(action, label, detail) {
+      if (!sessionId || !currentObservation) return;
+      if (done) {
+        logEntry('Action blocked', 0, 'Episode already finished.', 'Reset the episode to continue.');
+        return;
+      }
+      try {
+        const payload = await callApi('/step', {
+          method: 'POST',
+          body: JSON.stringify({ session_id: sessionId, action }),
+        });
+        currentObservation = payload.observation;
+        totalReward += Number(payload.reward.total_reward);
+        done = Boolean(payload.done);
+        renderPatient(currentObservation);
+        renderProtocol(currentObservation);
+        populateSelectors(currentObservation);
+        renderStatus(currentObservation);
+        showFinalBanner(payload.reward);
+        logEntry(label, payload.reward.total_reward, detail, payload.reward.verifier_feedback);
+      } catch (error) {
+        logEntry(`${label} failed`, 0, detail, error.message);
+      }
+    }
+
+    function currentReasoning() {
+      return reasoningInput.value.trim() || 'Manual console action from the demo frontend.';
+    }
+
+    document.getElementById('resetButton').addEventListener('click', resetDemo);
+    document.getElementById('inspectPatientButton').addEventListener('click', () => {
+      runAction({ action_type: 'inspect_patient', confidence_score: 0.5 }, 'Inspect Patient', 'Refreshed patient-facing evidence.');
+    });
+    document.getElementById('inspectProtocolButton').addEventListener('click', () => {
+      runAction({ action_type: 'inspect_protocol', confidence_score: 0.5 }, 'Inspect Protocol', 'Refreshed protocol-facing evidence.');
+    });
+    document.getElementById('evaluateButton').addEventListener('click', () => {
+      const criterionId = criterionSelect.value;
+      const verdict = verdictSelect.value;
+      const reasoning = currentReasoning();
+      runAction({
+        action_type: 'evaluate_criterion',
+        criterion_id: criterionId,
+        evaluation: { criterion_id: criterionId, verdict, reasoning },
+        confidence_score: 0.9,
+      }, `Evaluate ${criterionId}`, `${criterionId} marked ${verdict}.`);
+    });
+    document.getElementById('clarifyButton').addEventListener('click', () => {
+      const target = clarificationSelect.value;
+      if (!target) return;
+      runAction({
+        action_type: 'ask_clarification',
+        clarification_target: target,
+        confidence_score: 0.7,
+      }, `Clarify ${target}`, `Requested clarification for ${target}.`);
+    });
+    document.getElementById('enrollButton').addEventListener('click', () => {
+      runAction({
+        action_type: 'enroll',
+        final_decision_reason: currentReasoning(),
+        confidence_score: 0.95,
+      }, 'Enroll', 'Submitted final enroll decision.');
+    });
+    document.getElementById('excludeButton').addEventListener('click', () => {
+      runAction({
+        action_type: 'exclude',
+        final_decision_reason: currentReasoning(),
+        confidence_score: 0.95,
+      }, 'Exclude', 'Submitted final exclude decision.');
+    });
+    document.getElementById('scheduleFollowupButton').addEventListener('click', () => {
+      const followupDay = Number(followupDayInput.value || 8);
+      runAction({
+        action_type: 'schedule_followup',
+        followup_day: followupDay,
+        confidence_score: 0.78,
+      }, 'Schedule Follow-Up', `Requested follow-up visit on day ${followupDay}.`);
+    });
+    document.getElementById('handleSafetyButton').addEventListener('click', () => {
+      const safetyResponse = safetyResponseSelect.value;
+      const payload = {
+        action_type: 'handle_safety_event',
+        safety_response: safetyResponse,
+        confidence_score: 0.82,
+      };
+      if (safetyResponse === 'reschedule') {
+        payload.reschedule_day = Number(rescheduleDayInput.value || 9);
+      }
+      runAction(
+        payload,
+        'Handle Safety Event',
+        safetyResponse === 'reschedule'
+          ? `Rescheduled follow-up to day ${payload.reschedule_day}.`
+          : 'Escalated the seizure-symptom event to the investigator.'
+      );
+    });
+    document.getElementById('deferButton').addEventListener('click', () => {
+      runAction({
+        action_type: 'defer',
+        final_decision_reason: currentReasoning(),
+        confidence_score: 0.5,
+      }, 'Defer', 'Submitted final defer decision.');
+    });
+
+    resetDemo();
+  </script>
+</body>
+</html>

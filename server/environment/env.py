@@ -21,8 +21,6 @@ from server.tasks.task_registry import get_task_definition
 class ClinicalTrialEnv:
     """In-memory environment manager with OpenEnv-style methods."""
 
-    SCORE_EPSILON = 0.01
-
     def __init__(self) -> None:
         settings = get_settings()
         protocol_dir = Path(__file__).resolve().parents[2] / "protocols"
@@ -52,6 +50,11 @@ class ClinicalTrialEnv:
             clarifications_used=0,
             clarification_budget=task.clarification_budget,
             amendment_injected=False,
+            workflow_phase="screening",
+            enrollment_decision=None,
+            scheduled_followup_day=None,
+            safety_event_active=False,
+            safety_response=None,
             cumulative_reward=0.0,
             done=False,
             termination_reason=None,
@@ -70,8 +73,31 @@ class ClinicalTrialEnv:
         state = self._get_session(session_id)
         if state.done:
             raise HTTPException(status_code=400, detail="Episode already done")
-        self._validate_action(state, action)
         hidden = state.__dict__["hidden_case"]
+        if state.task_id == "task3" and state.workflow_phase == "screening":
+            pre_action_notice = self.state_machine.maybe_inject_amendment(state)
+        else:
+            pre_action_notice = {}
+        invalid_reason = self._invalid_action_reason(state, action)
+        if invalid_reason is not None:
+            info = self.state_machine.apply_invalid_action(state, action, invalid_reason)
+            amendment_notice = self.state_machine.maybe_inject_amendment(state)
+            info.update(pre_action_notice)
+            info.update(amendment_notice)
+            reward = self.reward_calculator.compute_invalid(state, invalid_reason)
+            state.cumulative_reward = round(state.cumulative_reward + reward.total_reward, 4)
+            self.episode_manager.touch(session_id)
+            return state.patient.model_copy(deep=True), reward, state.done, info
+
+        self._validate_action_ids(state, action)
+        current_truth = self.reward_calculator._current_truth(state, hidden)
+        if state.task_id == "task3" and action.action_type == ActionType.ENROLL and self.reward_calculator._is_unsafe_enrollment(action, current_truth):
+            info = self.state_machine.apply_unsafe_enrollment(state, action)
+            info.update(pre_action_notice)
+            reward = self.reward_calculator.compute(state, action, info)
+            state.cumulative_reward = round(state.cumulative_reward + reward.total_reward, 4)
+            self.episode_manager.touch(session_id)
+            return state.patient.model_copy(deep=True), reward, state.done, info
         if action.action_type == ActionType.EVALUATE_CRITERION and action.criterion_id:
             counts = hidden.setdefault("evaluation_counts", {})
             hidden["repeat_same_criterion"] = counts.get(action.criterion_id, 0) > 0
@@ -97,12 +123,10 @@ class ClinicalTrialEnv:
             hidden["criterion_truth"]["INC-003"] = hidden["meta"]["post_amendment_truth"]
             hidden["amendment_detected"] = True
         amendment_notice = self.state_machine.maybe_inject_amendment(state)
+        info.update(pre_action_notice)
         info.update(amendment_notice)
         reward = self.reward_calculator.compute(state, action, info)
-        state.cumulative_reward = round(
-            self._clamp_open_unit_interval(state.cumulative_reward + reward.total_reward),
-            4,
-        )
+        state.cumulative_reward = round(state.cumulative_reward + reward.total_reward, 4)
         self.episode_manager.touch(session_id)
         return state.patient.model_copy(deep=True), reward, state.done, info
 
@@ -126,17 +150,38 @@ class ClinicalTrialEnv:
             raise HTTPException(status_code=404, detail="session_id not found")
         return self.sessions[session_id]
 
-    def _validate_action(self, state: TrialState, action: ScreeningAction) -> None:
+    def _validate_action_ids(self, state: TrialState, action: ScreeningAction) -> None:
         truth = state.__dict__["hidden_case"]["criterion_truth"]
         if action.action_type == ActionType.EVALUATE_CRITERION and action.criterion_id not in truth:
             raise HTTPException(status_code=400, detail="Unknown criterion_id")
         if action.action_type == ActionType.ASK_CLARIFICATION:
-            if state.clarifications_used >= state.clarification_budget:
-                raise HTTPException(status_code=400, detail="Clarification budget exhausted")
             if action.clarification_target not in truth:
                 raise HTTPException(status_code=400, detail="Unknown clarification_target")
-        if action.action_type in {ActionType.ENROLL, ActionType.EXCLUDE} and len(state.evaluated_criteria) == 0:
-            raise HTTPException(status_code=400, detail="Must evaluate criteria before final decision")
 
-    def _clamp_open_unit_interval(self, value: float) -> float:
-        return min(max(value, self.SCORE_EPSILON), 1.0 - self.SCORE_EPSILON)
+    def _invalid_action_reason(self, state: TrialState, action: ScreeningAction) -> str | None:
+        if action.action_type == ActionType.ASK_CLARIFICATION and state.clarifications_used >= state.clarification_budget:
+            return "Clarification budget exhausted."
+        if action.action_type in {ActionType.ENROLL, ActionType.EXCLUDE, ActionType.DEFER} and not state.evaluated_criteria:
+            return "At least one criterion must be evaluated before a final decision."
+        if state.task_id == "task3":
+            ops = state.patient.operational_state
+            if action.action_type in {ActionType.ENROLL, ActionType.EXCLUDE, ActionType.DEFER} and state.workflow_phase != "screening":
+                return "Screening decisions are only available during the screening phase."
+            if action.action_type in {ActionType.ENROLL, ActionType.EXCLUDE, ActionType.DEFER} and not state.amendment_injected:
+                return "Protocol review incomplete before final decision. Wait for the amendment notice."
+            if action.action_type == ActionType.SCHEDULE_FOLLOWUP:
+                if state.workflow_phase != "followup_scheduling":
+                    return "Follow-up scheduling is only available after safe enrollment."
+                if ops is None or action.followup_day is None:
+                    return "A valid follow-up day is required."
+                if not (ops.followup_window_start <= action.followup_day <= ops.followup_window_end):
+                    return f"Follow-up day must stay within the allowed window of day {ops.followup_window_start} to {ops.followup_window_end}."
+            if action.action_type == ActionType.HANDLE_SAFETY_EVENT:
+                if state.workflow_phase != "safety_event" or not state.safety_event_active:
+                    return "Safety handling is only available when a safety event is active."
+                if action.safety_response == "reschedule":
+                    if ops is None or action.reschedule_day is None:
+                        return "A new follow-up day is required when rescheduling."
+                    if not (ops.followup_window_start <= action.reschedule_day <= ops.followup_window_end):
+                        return f"Rescheduled follow-up day must stay within the allowed window of day {ops.followup_window_start} to {ops.followup_window_end}."
+        return None

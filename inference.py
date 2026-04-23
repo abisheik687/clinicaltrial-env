@@ -21,6 +21,9 @@ from typing import Any
 
 import httpx
 from openai import OpenAI
+from pydantic import ValidationError
+
+from server.models.action import ScreeningAction
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
@@ -28,10 +31,7 @@ API_KEY = os.environ.get("HF_TOKEN", "")
 ENV_BASE_URL = os.environ.get("ENV_URL", "http://localhost:7860")
 
 BENCHMARK = "clinicaltrial-env"
-SUCCESS_SCORE_THRESHOLD = 0.5
 MAX_REPAIR_ATTEMPTS = 1
-DISPLAY_SCORE_FLOOR = 0.01
-DISPLAY_SCORE_CEILING = 0.99
 ACE_INHIBITORS = {"lisinopril", "enalapril", "ramipril"}
 STEROID_EQUIVALENT = {"prednisone": 1.0, "methylprednisolone": 1.25, "dexamethasone": 6.67}
 
@@ -40,26 +40,17 @@ TASKS = [
     {"task_id": "task2", "seed": 43, "max_steps": 14, "name": "Multi-Criteria Screening"},
     {"task_id": "task3", "seed": 44, "max_steps": 20, "name": "Amendment Screening"},
 ]
-MAX_TOTAL_REWARD = {
-    "task1": 1.40,
-    "task2": 1.85,
-    "task3": 2.50,
-}
-
-
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
 def format_logged_reward(reward: float) -> str:
-    safe_reward = min(max(reward, DISPLAY_SCORE_FLOOR), DISPLAY_SCORE_CEILING)
-    return f"{safe_reward:.2f}"
+    return f"{float(reward):.2f}"
 
 
 def normalize_task_score(total_reward: float, task_id: str) -> float:
-    max_total_reward = MAX_TOTAL_REWARD[task_id]
-    normalized = total_reward / max_total_reward if max_total_reward > 0 else DISPLAY_SCORE_FLOOR
-    return min(max(normalized, DISPLAY_SCORE_FLOOR), DISPLAY_SCORE_CEILING)
+    del task_id
+    return 1.0 if total_reward > 0.0 else 0.0
 
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Any) -> None:
@@ -81,11 +72,11 @@ def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> No
 
 
 def build_system_prompt() -> str:
-    return """You are a clinical trial coordinator AI assistant. Screen one patient for trial eligibility.
+    return """You are a clinical trial coordinator AI assistant operating inside a clinical trial workflow environment.
 
 Return exactly one JSON object using this schema:
 {
-  "action_type": "evaluate_criterion" | "ask_clarification" | "enroll" | "exclude" | "defer",
+  "action_type": "evaluate_criterion" | "ask_clarification" | "enroll" | "exclude" | "defer" | "schedule_followup" | "handle_safety_event",
   "criterion_id": "INC-001",
   "evaluation": {
     "criterion_id": "INC-001",
@@ -94,6 +85,9 @@ Return exactly one JSON object using this schema:
   },
   "clarification_target": null,
   "final_decision_reason": null,
+  "followup_day": null,
+  "safety_response": null,
+  "reschedule_day": null,
   "confidence_score": 0.9
 }
 
@@ -101,7 +95,9 @@ Rules:
 - Evaluate criteria methodically.
 - Ask for clarification only when a criterion is marked clarifiable and the value is pending or estimated.
 - Re-check INC-003 if an amendment activates in task 3.
-- Finish with enroll or exclude, never defer."""
+- After a safe enroll in task 3, schedule a follow-up visit inside the allowed window.
+- If a seizure-symptom safety event becomes active, respond with a valid handle_safety_event action.
+- Return one action only, never markdown or commentary."""
 
 
 def build_user_message(observation: dict, reward: float, history: list[str], step: int) -> str:
@@ -130,11 +126,12 @@ def parse_action_payload(content: str) -> dict:
     parsed = json.loads(content)
     if not isinstance(parsed, dict):
         raise ValueError("Model response must be a JSON object")
-    action_type = parsed.get("action_type")
-    if action_type not in {"evaluate_criterion", "ask_clarification", "enroll", "exclude", "defer"}:
-        raise ValueError("Model response has an invalid action_type")
     parsed.setdefault("confidence_score", 0.5)
-    return parsed
+    try:
+        validated = ScreeningAction.model_validate(parsed)
+    except ValidationError as exc:
+        raise ValueError(f"Model response does not match the action schema: {exc}") from exc
+    return validated.model_dump(exclude_none=True)
 
 
 def _chat_json(client: OpenAI, user_message: str) -> str:
@@ -179,6 +176,33 @@ def get_agent_action(
 
 
 def build_fallback_action(observation: dict, task_id: str, action_records: list[dict[str, Any]]) -> dict:
+    operational_state = observation.get("operational_state") or {}
+    if task_id == "task3":
+        if operational_state.get("workflow_phase") == "followup_scheduling":
+            return {
+                "action_type": "schedule_followup",
+                "followup_day": 8,
+                "confidence_score": 0.74,
+            }
+        if operational_state.get("workflow_phase") == "safety_event":
+            return {
+                "action_type": "handle_safety_event",
+                "safety_response": "escalate",
+                "confidence_score": 0.81,
+            }
+        if operational_state.get("amendment_review_required"):
+            verdict, reasoning = evaluate_criterion_heuristically(observation, task_id, "INC-003")
+            return {
+                "action_type": "evaluate_criterion",
+                "criterion_id": "INC-003",
+                "evaluation": {
+                    "criterion_id": "INC-003",
+                    "verdict": verdict,
+                    "reasoning": reasoning,
+                },
+                "confidence_score": 0.76 if verdict != "uncertain" else 0.45,
+            }
+
     criteria = observation["trial_protocol_summary"]["inclusion_criteria"] + observation["trial_protocol_summary"]["exclusion_criteria"]
     evaluated_ids = {
         record.get("criterion_id")
@@ -214,11 +238,13 @@ def build_fallback_action(observation: dict, task_id: str, action_records: list[
         }
 
     final_action, reason = choose_final_decision(observation, task_id, action_records)
-    return {
+    payload = {
         "action_type": final_action,
-        "final_decision_reason": reason,
         "confidence_score": 0.68,
     }
+    if final_action in {"enroll", "exclude", "defer"}:
+        payload["final_decision_reason"] = reason
+    return payload
 
 
 def should_request_clarification(observation: dict, task_id: str, criterion_id: str) -> bool:
@@ -374,8 +400,10 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
     action_records: list[dict[str, Any]] = []
     rewards: list[float] = []
     steps_taken = 0
-    score = DISPLAY_SCORE_FLOOR
+    score = 0.0
     success = False
+    unsafe_action = False
+    diagnostic_metrics: dict[str, float] = {}
 
     try:
         reset_response = await env_client.post("/reset", json={"task_id": task_id, "seed": seed}, timeout=30.0)
@@ -384,6 +412,7 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
         session_id = reset_data["session_id"]
         observation = reset_data["observation"]
         last_reward = 0.0
+        last_reward_payload: dict[str, Any] = {}
         done = False
 
         for step in range(1, max_steps + 1):
@@ -400,7 +429,8 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
 
             step_data = step_response.json()
             observation = step_data["observation"]
-            reward = float(step_data["reward"]["total_reward"])
+            last_reward_payload = step_data["reward"]
+            reward = float(last_reward_payload["total_reward"])
             done = bool(step_data["done"])
             info = step_data.get("info", {})
 
@@ -412,16 +442,28 @@ async def run_task(client: OpenAI, env_client: httpx.AsyncClient, task_config: d
 
             log_step(step=step, action=action_str, reward=reward, done=done, error=info.get("error"))
 
-        total_reward = sum(rewards)
-        score = normalize_task_score(total_reward, task_id)
-        success = total_reward >= SUCCESS_SCORE_THRESHOLD if rewards else False
+        final_reward = rewards[-1] if rewards else 0.0
+        score = normalize_task_score(final_reward, task_id)
+        success = bool(last_reward_payload.get("terminal_success", False))
+        unsafe_action = bool(last_reward_payload.get("unsafe_action", False))
+        diagnostic_metrics = {
+            key: float(value)
+            for key, value in last_reward_payload.get("diagnostic_metrics", {}).items()
+        }
     except Exception:
-        score = DISPLAY_SCORE_FLOOR
+        score = 0.0
         success = False
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
-    return {"task_id": task_id, "success": success, "steps": steps_taken, "score": score}
+    return {
+        "task_id": task_id,
+        "success": success,
+        "steps": steps_taken,
+        "score": score,
+        "unsafe_action": unsafe_action,
+        "diagnostic_metrics": diagnostic_metrics,
+    }
 
 
 async def main() -> None:

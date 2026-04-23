@@ -11,3 +11,6 @@ env/
 venv/
 build/
 .DS_Store
+.codex-uvicorn*.log
+artifacts/phase1_grpo/checkpoint-*/
+artifacts/phase1_grpo/model/

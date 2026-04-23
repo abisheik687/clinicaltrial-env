@@ -49,23 +49,23 @@ def test_log_format_strict_stdout(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_logged_rewards_never_round_to_closed_interval_endpoints(capsys: pytest.CaptureFixture[str]) -> None:
-    inference.log_step(1, '{"action_type":"defer"}', 0.0001, False, None)
-    inference.log_end(False, 2, 0.9999, [0.0001, 0.9999])
+    inference.log_step(1, '{"action_type":"defer"}', -0.05, False, None)
+    inference.log_end(False, 2, 1.0, [-0.05, 1.0])
     lines = capsys.readouterr().out.strip().splitlines()
 
-    assert "reward=0.01" in lines[0]
-    assert lines[1] == "[END]   success=false steps=2 score=0.99 rewards=0.01,0.99"
+    assert "reward=-0.05" in lines[0]
+    assert lines[1] == "[END]   success=false steps=2 score=1.00 rewards=-0.05,1.00"
 
 
 def test_normalize_task_score_stays_inside_open_interval() -> None:
-    assert inference.normalize_task_score(0.0, "task1") == 0.01
-    assert inference.normalize_task_score(999.0, "task1") == 0.99
+    assert inference.normalize_task_score(-1.0, "task1") == 0.0
+    assert inference.normalize_task_score(1.0, "task1") == 1.0
 
 
 def test_run_task_returns_explicit_score_for_all_tasks() -> None:
     for task_config in inference.TASKS:
         score = inference.normalize_task_score(0.5, task_config["task_id"])
-        assert 0.0 < score < 1.0
+        assert score == 1.0
 
 
 def test_malformed_model_output_falls_back_to_safe_action() -> None:
@@ -97,4 +97,4 @@ async def test_fallback_policy_completes_tasks_within_budget() -> None:
             result = await inference.run_task(fake_client, client, task_config)
             assert result["steps"] <= task_config["max_steps"]
             assert result["task_id"] == task_config["task_id"]
-            assert 0.0 < result["score"] < 1.0
+            assert 0.0 <= result["score"] <= 1.0

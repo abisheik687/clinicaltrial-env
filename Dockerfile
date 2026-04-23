@@ -15,6 +15,7 @@ COPY server/ ./server/
 COPY protocols/ ./protocols/
 COPY openenv.yaml .
 COPY inference.py .
+COPY demo_frontend.html .
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser

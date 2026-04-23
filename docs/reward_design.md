@@ -1,84 +1,59 @@
 # Reward Design
 
-ClinicalTrialEnv separates shaped RL reward from deterministic task grading.
+ClinicalTrialEnv now uses a **verifier-centric reward** designed for Phase 1 training evidence.
 
-## Philosophy
+## Core Rule
 
-Binary rewards are weak for long, clinical workflows. Coordinators do useful work before the final enroll or exclude decision: reviewing criteria, requesting the right missing information, and avoiding unsafe shortcuts. Partial rewards let an RL agent learn those intermediate behaviors directly.
+The reward is driven by one terminal question:
 
-## Reward Components
+**Did the agent end with the correct safe final decision under the latest protocol state and revealed evidence?**
 
-### Step Rewards
+That means the reward is no longer a blend of correctness, verbosity, efficiency, and shaping bonuses. The environment now treats the final decision as the objective and diagnostic metrics as diagnostics only.
 
-- Correct criterion evaluation: `+0.10` to `+0.15` depending on task difficulty
-- Coherent reasoning string longer than 20 characters: `+0.05`
-- Re-evaluating the same criterion without clarification: `-0.05`
-- Asking for clarification on a confirmed value: `-0.10`
-- Asking for clarification on pending or estimated data: `0.00`
+## Terminal Reward
 
-### Episode Rewards
+- `+1.0`: correct safe final decision
+- `0.0`: incorrect final decision or unresolved/defer outcome
+- `-1.0`: unsafe enrollment
 
-- Correct final decision: `+0.40`
-- Wrong enrollment with a critical exclusion: `-0.30`
-- Final `defer`: `-0.20`
-- Finish within 60% of the step budget: `+0.10`
-- Unused steps: `+0.05` each, capped at `+0.15`
+Unsafe enrollment is fully deterministic:
 
-### Behavioral Penalties
+- `enroll` when any exclusion criterion is active
+- `enroll` when any required inclusion criterion is definitively unmet
 
-- Same action repeated 3 or more times: `-0.30`
-- Final decision before evaluating 50% of criteria: `-0.15`
-- Step overflow guard: `-0.05` per extra step
+No model-judged safety logic is used.
 
-## Mathematical Form
+## Minimal Shaping
 
-```text
-raw_sum = step_reward + final_bonus + efficiency_bonus - penalties
-normalized_score = clamp(raw_sum / max_possible_reward, 0.0, 1.0)
-```
+The only shaping term retained for the initial GRPO phase is:
 
-Task-specific normalizers:
+- `-0.05`: invalid or impossible action that still fits the schema
 
-- Task 1: `1.40`
-- Task 2: `1.85`
-- Task 3: `2.50`
+Examples:
 
-## Good vs Bad Reward Traces
+- trying to finalize before evaluating any criterion
+- requesting clarification after the budget is exhausted
 
-Good agent:
+This keeps the rollout trainable without turning the reward into a proxy soup.
 
-```text
-step1 evaluate correctly      +0.10
-step2 evaluate correctly      +0.10
-step3 clarification neutral   +0.00
-step4 evaluate correctly      +0.15
-final correct decision        +0.40
-efficiency bonus              +0.15
-```
+## Diagnostic Metrics
 
-Bad agent:
+These metrics are logged in the reward payload but do **not** define success:
 
-```text
-step1 wrong evaluation        +0.00
-step2 unnecessary clarify     -0.10
-step3 repeat same criterion   -0.05
-step4 loop detection          -0.30
-final defer                   -0.20
-```
+- `criterion_evaluation_accuracy`
+- `clarification_efficiency`
+- `unsafe_action_rate`
+- `amendment_recovery_rate`
 
-## Dual Signal: Accuracy Plus Efficiency
+They are intended for evaluation plots and judge-facing analysis, not for changing the optimization target.
 
-This reward landscape creates real tradeoffs:
+## Why This Design
 
-- rushing to a decision can earn efficiency points but risks a premature-decision penalty
-- asking for clarification is neutral when justified but costly in step budget
-- repeated evaluation is discouraged, but amendment-driven re-evaluation remains strategically important in Task 3
+This version follows the hackathon guidance more closely:
 
-That makes the environment suitable for RL, imitation learning, and agentic policy optimization.
+- start simple
+- use objective checks
+- make reward hacking harder
+- show clear improvement in reward and behavior
 
-## Grader vs Reward
-
-- Reward guides learning on each environment step.
-- Graders score the finished episode according to the task rubric.
-- Reward transparency is preserved through `partial_credit`, while graders keep benchmark reporting deterministic and comparable across runs.
-
+The previous dense scheme made it too easy to earn reward without solving the real task. The current design makes the environment a cleaner fit for GRPO and for judging.

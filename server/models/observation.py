@@ -89,6 +89,22 @@ class TrialProtocolSummary(BaseModel):
     amendment_description: Optional[str] = None
 
 
+class OperationalState(BaseModel):
+    """Minimal workflow state exposed for the finals operations extension."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_phase: Literal["screening", "followup_scheduling", "safety_event", "complete", "excluded"]
+    followup_window_start: Optional[int] = None
+    followup_window_end: Optional[int] = None
+    scheduled_followup_day: Optional[int] = None
+    amendment_review_required: bool = False
+    safety_event_active: bool = False
+    safety_event_description: Optional[str] = None
+    required_safety_action: Optional[Literal["reschedule", "escalate"]] = None
+    safety_response: Optional[Literal["reschedule", "escalate"]] = None
+
+
 class PatientObservation(BaseModel):
     """Full environment observation."""
 
@@ -100,6 +116,7 @@ class PatientObservation(BaseModel):
     lab_values: dict[str, LabValue]
     current_medications: list[Medication]
     trial_protocol_summary: TrialProtocolSummary
+    operational_state: Optional[OperationalState] = None
     step_number: int = Field(ge=0)
     steps_remaining: int = Field(ge=0)
     previous_actions: list[str]
@@ -110,4 +127,3 @@ class PatientObservation(BaseModel):
     def validate_uuid(cls, value: str) -> str:
         UUID(value)
         return value
-

@@ -1,19 +1,18 @@
 name: clinicaltrial-env
 version: "1.0.0"
 description: >
-  An RL environment where AI agents learn to screen patients for clinical trial
-  enrollment — evaluating inclusion/exclusion criteria, handling ambiguous lab
-  values, requesting clarifications, and making enrollment decisions under
-  protocol amendments.
+  A clinical trial operations environment where agents learn safe enrollment
+  decisions under partial information, protocol amendments, and operational
+  constraints.
 author: "ClinicalTrialEnv Team"
 license: "MIT"
 tags:
   - openenv
   - healthcare
   - clinical-trials
-  - real-world
+  - professional-workflow
   - multi-step
-  - partial-rewards
+  - verifier-driven
 
 environment:
   type: "sequential-decision"
@@ -21,7 +20,7 @@ environment:
     - single_patient_screening
   action_space: "discrete+structured"
   observation_space: "structured-dict"
-  reward_range: [0.0, 1.0]
+  reward_range: [-1.0, 1.0]
   max_steps_per_episode: 20
   deterministic: true
 
@@ -30,17 +29,17 @@ tasks:
     name: "Single Criterion Hypertension Screening"
     difficulty: easy
     max_steps: 8
-    description: "Screen patient for Phase III hypertension trial with 5 clear criteria"
+    description: "Screen a patient for a hypertension trial with clear eligibility and exclusion rules."
   - id: task2
     name: "Multi-Criteria Oncology Screening"
     difficulty: medium
     max_steps: 14
-    description: "Screen patient for CAR-T trial with 9 criteria including drug interactions"
+    description: "Screen a patient for a CAR-T trial with compound marrow checks and medication reasoning."
   - id: task3
     name: "Ambiguous Gene Therapy Screening with Protocol Amendment"
     difficulty: hard
     max_steps: 20
-    description: "Screen patient for gene therapy trial with uncertain values and mid-episode amendment"
+    description: "Screen a patient for gene therapy with ambiguous evidence and a mid-episode protocol amendment."
 
 api:
   framework: fastapi
@@ -58,9 +57,6 @@ deployment:
   hf_space_tags: ["openenv"]
 
 baseline:
-  script: "inference.py"
-  model: "gpt-4o-mini"
-  expected_scores:
-    task1: 0.85
-    task2: 0.65
-    task3: 0.40
+  script: "training/grpo_phase1.py"
+  evaluation_script: "training/evaluate_models.py"
+  model: "Qwen/Qwen2.5-3B-Instruct"

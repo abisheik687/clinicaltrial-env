@@ -1,6 +1,6 @@
 ---
 title: ClinicalTrialEnv
-emoji: 🏥
+emoji: "🏥"
 colorFrom: blue
 colorTo: green
 sdk: docker
@@ -11,342 +11,193 @@ tags:
   - clinical-trials
   - reinforcement-learning
   - healthcare
+  - professional-workflow
 app_port: 7860
 ---
 
-# ClinicalTrialEnv 🏥
+# ClinicalTrialEnv
 
-> **An RL environment where AI agents learn to screen, evaluate, and enroll patients in clinical trials — the way a real clinical trial coordinator does.**
+ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment for training agents to make safe enrollment decisions under partial information, protocol amendments, and operational constraints.
 
-[![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-compatible-blue)](https://github.com/openenv-ai) [![HF Spaces](https://img.shields.io/badge/HF-Spaces-green)](https://huggingface.co/spaces) [![Docker](https://img.shields.io/badge/Docker-ready-2496ED)](https://www.docker.com/)
+This finalist version is framed for **OpenEnv Theme 3.1: Professional Tasks**. The core angle is a **multi-app professional workflow** where the agent coordinates protocol rules, patient records, lab evidence, medication conflicts, and changing operational logic.
 
-## Live Deployment
+Training is **environment-driven, not dataset-driven**. The current patient cases are **synthetic, seed-deterministic, and generated inside the environment** so the same episode can be replayed exactly for training, evaluation, and demos. External data grounding is intentionally deferred until after real training evidence exists.
 
-- GitHub repository: [abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
-- Hugging Face Space: [abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
-- Live app URL: [https://abisheiks-clinicaltrial-env.hf.space](https://abisheiks-clinicaltrial-env.hf.space)
+## Finalist Upgrade
 
-## Validation Status
+- Rewarding dense intermediate behavior has been replaced by a **single terminal verifier**.
+- Episode success is now defined by one question:
+  - **Did the agent end with the correct safe final decision under the latest protocol state and revealed evidence?**
+- Unsafe enrollment is deterministic:
+  - enrolling while any exclusion is active
+  - enrolling while any required inclusion is definitively unmet
+- Invalid but schema-valid actions now return a small penalty instead of killing the rollout.
+- The repo now includes a training/evaluation path:
+  - `training/grpo_phase1.py`
+  - `training/evaluate_models.py`
+  - `training/plot_results.py`
+  - `training/phase1_colab.ipynb`
 
-ClinicalTrialEnv is deployed and publicly reachable on Hugging Face Spaces. The core pre-submission checks have been verified:
+## Environment Overview
 
-- `openenv validate` passes
-- `docker build` succeeds
-- `GET /health` returns `200`
-- `POST /reset` returns `200`
+Each episode presents one synthetic patient case and a summarized trial protocol. The agent can:
 
-![OpenEnv validate success](docs/assets/openenv-validate-success.png)
+- inspect the patient state
+- inspect the protocol state
+- evaluate criteria
+- request clarification
+- finalize `enroll`, `exclude`, or `defer`
+- schedule one follow-up visit after a safe enrollment
+- handle one deterministic safety event before the follow-up visit
 
-## Why This Is Not A Toy Environment
+Task 3 is the Phase 1 training target because it concentrates the finalist behaviors into one bounded episode:
 
-ClinicalTrialEnv models a real coordinator workflow that already exists in pharmaceutical operations: patient-by-patient trial screening under inclusion rules, exclusion rules, missing evidence, medication conflicts, and protocol amendments. The benchmark is designed around the kinds of decisions that make real enrollment operations expensive and safety-sensitive:
+- ambiguous evidence
+- clarification budgeting
+- a visible amendment during screening
+- one follow-up scheduling decision
+- one judge-visible seizure-symptom safety event
 
-- eligibility decisions must be auditable and criterion-specific
-- partial information can require explicit clarification rather than guessing
-- medication conflicts and compound lab criteria matter clinically
-- protocol amendments can invalidate reasoning that was correct one step earlier
+## Tasks
 
-The result is a benchmark for operational reasoning, not a game mechanic or synthetic puzzle.
+### Task 1: Hypertension Screening
 
-## 🎯 Hackathon Problem Statement Alignment
+- clear inclusion and exclusion checks
+- no clarification budget
+- good for validation and deterministic walkthroughs
 
-This environment was built for the OpenEnv Hackathon Round 1. Every major judging axis is mapped explicitly to the implementation.
+### Task 2: Oncology Screening
 
-| Judging Criterion | Weight | How ClinicalTrialEnv Addresses It |
-|---|---|---|
-| Real-world utility | 30% | Clinical trial coordination is a real operational bottleneck in pharma and CRO workflows. The environment models patient screening, safety exclusions, clarifications, and enrollment decisions. |
-| Task & grader quality | 25% | Three tasks progress from easy to hard, each with deterministic graders, explicit rubrics, and bounded scores in `[0.0, 1.0]`. |
-| Environment design | 20% | The environment includes a true state machine, structured observation/action/reward models, protocol amendments, session isolation, and shaped rewards with partial progress signals. |
-| Code quality & spec | 15% | FastAPI API, typed Pydantic v2 models, `openenv.yaml`, deterministic data generation, Docker packaging, and tests are all included. |
-| Creativity & novelty | 10% | The design introduces clinical screening logic, clarification requests for uncertain data, and a mid-episode protocol amendment that forces adaptive reasoning. |
+- compound marrow reasoning
+- medication-dose interpretation
+- medium-complexity operational logic
 
-### Why This Domain
+### Task 3: Minimal Clinical Trial Operations Extension
 
-Clinical trial coordinators screen large candidate pools under strict safety and protocol rules. Incorrect enrollment decisions can expose patients to harm, delay enrollment, and increase trial costs. ClinicalTrialEnv models:
+- gene-therapy screening with ambiguous severity evidence
+- protocol amendment requiring re-check of `INC-003`
+- follow-up scheduling inside a day `7` to `10` window after safe enrollment
+- deterministic safety event: new seizure symptoms before follow-up
+- required safety response: investigator escalation
+- best Phase 1 GRPO target because it adds long-horizon workflow without exploding complexity
 
-- deterministic inclusion and exclusion rules
-- uncertainty through `pending` and `estimated` values
-- protocol amendments that change eligibility mid-episode
-- partial-information decision making with auditable reasoning
+## Reward And Verifier
 
-No toy game mechanics are used. The environment is built around a real-world administrative and safety-critical workflow.
+The environment now uses a verifier-centric reward. For task 3, the final score is the average of the applicable workflow components:
 
-### How Graders Stay Deterministic
+- `eligibility`: correct safe enroll/exclude decision under the latest protocol state
+- `amendment`: correct handling of the amendment when it changes the active truth
+- `scheduling`: valid follow-up scheduling inside the allowed window
+- `safety`: correct response to the seizure-symptom event
+- `+1`: all applicable verifier components satisfied
+- `0`: one or more applicable verifier components failed
+- `-1`: unsafe enrollment
+- `-0.05`: invalid or impossible action that still fits the schema
 
-Each task uses seeded synthetic patients, protocol-specific hidden truth labels, and a programmatic grader with bounded outputs in `[0.0, 1.0]`. The grader logic does not depend on non-deterministic LLM judging. That means:
+Diagnostic metrics are tracked separately and do **not** define success:
 
-- the same seed always produces the same patient
-- the same trajectory always produces the same grader score
-- partial credit, amendment handling, and penalties are transparent and reproducible
+- criterion evaluation accuracy
+- clarification efficiency
+- unsafe action rate
+- amendment recovery rate
+- eligibility component score
+- scheduling component score
+- safety component score
 
-## 📋 Environment Overview
+## Training-First Workflow
 
-Each episode presents a synthetic patient case and a summarized trial protocol. The agent acts as a clinical trial coordinator. It can evaluate criteria, request clarification for uncertain values, and then decide whether to enroll or exclude the patient. Task 3 adds a protocol amendment at step 6, reflecting how real trials are updated mid-study.
-
-The environment is deterministic by seed, exposes an OpenEnv-style API, and stores hidden ground truth internally for grading and reward shaping. That makes it suitable for benchmarking LLM agents, RL policies, and hybrid decision systems.
-
-## 🎮 Tasks
-
-### Task 1: Single Criterion Screening (Easy)
-
-- Capability tested: disciplined deterministic screening with clear objective evidence
-- Protocol: hypertension Phase III trial
-- Inclusion criteria: age, confirmed hypertension history, systolic blood pressure range
-- Exclusion criteria: severe renal impairment, ACE inhibitor use
-- Clarification budget: `0`
-- Max steps: `8`
-- Grading: `(correct criteria / 5) * 0.6 + correct final decision * 0.4`
-- Expected baseline score: `0.85`
-
-### Task 2: Multi-Criteria Oncology Screening (Medium)
-
-- Capability tested: compound clinical reasoning plus medication-dose interpretation
-- Protocol: CAR-T therapy Phase II trial
-- Inclusion criteria: age, DLBCL diagnosis, ECOG status, marrow function, measurable disease
-- Exclusion criteria: active CNS lymphoma, prior CAR-T, autoimmune disease, excessive corticosteroids
-- Clarification budget: `2`
-- Max steps: `14`
-- Special logic: ANC clarification, compound marrow criterion, corticosteroid dose reasoning
-- Expected baseline score: `0.65`
-
-### Task 3: Ambiguous Gene Therapy Screening (Hard)
-
-- Capability tested: uncertainty handling, clarification budgeting, and protocol adaptation
-- Protocol: rare disease gene therapy Phase I/II
-- Inclusion criteria: pediatric/adult age range, MECP2 mutation, CSS severity score, no prior gene therapy, hepatic function, minimum weight
-- Exclusion criteria: uncontrolled seizures, AAV hypersensitivity, other interventional trial, short life expectancy
-- Clarification budget: `5`
-- Max steps: `20`
-- Special mechanic: Amendment A1 changes the CSS threshold at step 6
-- Frontier challenge: reasoning about INC-003 can become stale after the amendment, so strong agents need to detect the change and re-evaluate rather than trust their earlier conclusion
-- Expected baseline score: `0.40`
-
-## 🔧 Action Space
-
-| Action | Purpose | Notes |
-|---|---|---|
-| `evaluate_criterion` | Judge one protocol criterion | Returns shaped reward for partial progress |
-| `ask_clarification` | Reveal pending or estimated information | Costs a step; penalized if unnecessary |
-| `enroll` | Final eligible decision | Correct decision receives episode bonus |
-| `exclude` | Final ineligible decision | Correct decision receives episode bonus |
-| `defer` | Weak final action | Accepted but penalized |
-
-Example:
-
-```json
-{
-  "action_type": "evaluate_criterion",
-  "criterion_id": "INC-001",
-  "evaluation": {
-    "criterion_id": "INC-001",
-    "verdict": "met",
-    "reasoning": "Patient age is within the protocol range."
-  },
-  "confidence_score": 0.91
-}
-```
-
-Full reference: [docs/action_space.md](docs/action_space.md)
-
-## 👁️ Observation Space
-
-Observations include:
-
-- patient demographics with computed BMI
-- diagnosis metadata and ICD-10 code
-- structured lab values with certainty tags
-- current medication list
-- trial protocol summary with inclusion and exclusion criteria
-- step counters, action history, and system messages
-
-Task 3 uses `trial_protocol_summary.amendment_active` and `amendment_description` to signal that eligibility logic has changed. Full reference: [docs/observation_space.md](docs/observation_space.md)
-
-## 💰 Reward Function
-
-ClinicalTrialEnv emits dense shaped reward during the episode and task-specific grader scores at the end.
-
-- Correct criterion evaluation: `+0.10` to `+0.15`
-- Reasoning bonus: `+0.05`
-- Repeat evaluation penalty: `-0.05`
-- Unnecessary clarification: `-0.10`
-- Correct final decision: `+0.40`
-- Final defer penalty: `-0.20`
-- Efficiency bonus: up to `+0.25`
-
-Normalization clamps each returned reward into `[0.0, 1.0]`. Full design rationale: [docs/reward_design.md](docs/reward_design.md)
-
-## 🚀 Quick Start
-
-### Local Development
+### Phase 0: Runtime And Validation
 
 ```bash
-git clone https://huggingface.co/spaces/YOUR_HF_USERNAME/clinicaltrial-env
-cd clinicaltrial-env
-cp .env.example .env
-docker-compose up
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python -m pytest -q
 ```
 
-### Running the Baseline
+### Phase 1: Minimal Training Evidence
+
+1. Start the environment locally:
 
 ```bash
-export API_BASE_URL="https://api.openai.com/v1"
-export MODEL_NAME="gpt-4o-mini"
-export HF_TOKEN="your-api-key"
-export ENV_URL="http://localhost:7860"
-python inference.py
+.venv/Scripts/python -m uvicorn server.main:app --host 0.0.0.0 --port 7860
 ```
 
-### Expected Output
-
-```text
-[START] task=Single Criterion Screening env=clinicaltrial-env model=gpt-4o-mini
-[STEP]  step=1 action={"action_type":"evaluate_criterion","criterion_id":"INC-001"} reward=0.12 done=false error=null
-...
-[END]   success=true steps=6 score=0.59 rewards=0.12,0.12,0.10,0.08,0.25,0.40
-```
-
-## 🐳 Docker
+2. Run a held-out baseline:
 
 ```bash
-docker build -t clinicaltrial-env .
-docker run -p 7860:7860 clinicaltrial-env
+.venv/Scripts/python training/evaluate_models.py --policy fallback --output artifacts/eval/baseline_eval.json
 ```
 
-The Docker image is HF Spaces compatible and listens on port `7860`.
-
-### Docker Verification Checklist
-
-- Docker Desktop is running
-- `docker info` succeeds
-- `docker build -t clinicaltrial-env .` succeeds
-- `docker run -p 7860:7860 clinicaltrial-env` starts without crashing
-- `curl http://localhost:7860/health` returns HTTP `200`
-- `curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{}'` returns HTTP `200`
-
-Tip: the repository now includes [.dockerignore](.dockerignore) so your local `.venv`, test cache, and docs do not bloat the Docker context.
-
-## ✅ Pre-Submission Validation
+3. Run Phase 1 GRPO:
 
 ```bash
-openenv validate
-curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{"task_id":"task1"}'
+.venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --output-dir artifacts/phase1_grpo
+```
+
+4. Evaluate the trained checkpoint:
+
+```bash
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --output artifacts/eval/trained_eval.json
+```
+
+5. Generate the judging plots:
+
+```bash
+.venv/Scripts/python training/plot_results.py
+```
+
+For a notebook workflow, use [training/phase1_colab.ipynb](training/phase1_colab.ipynb).
+
+## Judging Artifacts
+
+The repo is set up to produce the two required evidence visuals:
+
+- **Plot 1:** training reward curve
+- **Plot 2:** held-out base vs trained comparison on:
+  - success rate
+  - unsafe rate
+  - amendment recovery rate
+
+The intended demo episode is a seeded Task 3 workflow where judges can see:
+
+- the screening decision
+- the amendment notice and required re-check
+- the scheduled follow-up day
+- the seizure-symptom safety event and the response decision
+
+## Results
+
+Add these committed artifacts before finals submission:
+
+- `artifacts/eval/baseline_eval.json`
+- `artifacts/phase1_grpo/train_log_history.json`
+- `artifacts/eval/trained_eval.json`
+- `artifacts/plots/training_reward_curve.png`
+- `artifacts/plots/heldout_base_vs_trained.png`
+
+README pass criteria for judges:
+
+- the Hugging Face Space root URL renders the interactive **Clinical Trial Operations Arena** demo
+- the `/health` endpoint returns `{"status":"ok", ...}`
+
+## API
+
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `GET /health`
+- `POST /validate_session`
+
+The service is packaged for Docker/Hugging Face Spaces and listens on port `7860`.
+
+## Validation
+
+```bash
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/openenv.exe validate
 docker build -t clinicaltrial-env .
 ```
 
-The target checks are:
+## Why This Fits The Scaler Bonus Direction
 
-- HF Space responds to `POST /reset` with HTTP `200`
-- `docker build` succeeds
-- `openenv validate` succeeds
-- `POST /reset` supports an empty JSON body and defaults to `task1`, which matches the sample pre-validator behavior
-
-### Benchmark Evidence
-
-- Local Docker build validated with `docker build -t clinicaltrial-env .`
-- Live Hugging Face Space responds to `GET /health`
-- Live Hugging Face Space responds to `POST /reset`
-- `openenv validate` returns ready-for-deployment status
-
-### Final Pre-Submission Command List
-
-Run these in order from the project root:
-
-```bash
-uv venv .venv --python 3.11
-uv pip install -r requirements.txt --python .venv/Scripts/python.exe
-uv run --python .venv/Scripts/python.exe pytest tests -q
-uv run --python .venv/Scripts/python.exe openenv validate
-uv run --python .venv/Scripts/python.exe uvicorn server.main:app --host 0.0.0.0 --port 7860
-```
-
-In another terminal:
-
-```bash
-curl http://localhost:7860/health
-curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{}'
-docker info
-docker build -t clinicaltrial-env .
-docker run -p 7860:7860 clinicaltrial-env
-```
-
-For Windows PowerShell, you can also use [validate.ps1](validate.ps1) once your local API is running.
-
-## 📊 Baseline Scores
-
-The table below shows target baseline behavior for the submitted seeds. These values are expected scores, not hard-coded outputs. Exact scores can vary modestly with the chosen provider/model, but the benchmark seeds remain fixed and reproducible:
-
-- `task1` always uses seed `42`
-- `task2` always uses seed `43`
-- `task3` always uses seed `44`
-- model/provider configuration comes from `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`
-- emitted baseline task scores are normalized and clamped into the strict open interval `(0, 1)` for validator compatibility
-
-| Task | Difficulty | Model | Score | Steps Used |
-|------|-----------|-------|-------|------------|
-| task1 | Easy | gpt-4o-mini | 0.85 | 6/8 |
-| task2 | Medium | gpt-4o-mini | 0.65 | 12/14 |
-| task3 | Hard | gpt-4o-mini | 0.40 | 18/20 |
-
-## 🏗️ Architecture
-
-```text
-FastAPI Routes
-  -> ClinicalTrialEnv
-     -> PatientGenerator + ProtocolLoader
-     -> StateMachine + EpisodeManager
-     -> RewardCalculator + Task Graders
-```
-
-Deep dive: [docs/architecture.md](docs/architecture.md)
-
-## 📁 Project Structure
-
-```text
-clinicaltrial-env/
-├── inference.py
-├── openenv.yaml
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── README.md
-├── server/
-├── protocols/
-├── tests/
-└── docs/
-```
-
-## 🔬 Technical Deep Dive
-
-- [Architecture](docs/architecture.md)
-- [Action Space](docs/action_space.md)
-- [Observation Space](docs/observation_space.md)
-- [Reward Design](docs/reward_design.md)
-- [Synthetic Cohort Analysis](docs/data_analysis.md)
-- [HF Spaces Deployment Checklist](docs/hf_spaces_deployment.md)
-
-## 📈 Synthetic Data Quality
-
-The environment does not rely on a fixed CSV dump. Instead it generates deterministic protocol-aware patient cohorts. A seeded analysis across the 50-case pool for each task shows:
-
-- task1 eligible ratio: `0.58`
-- task2 eligible ratio: `0.52`
-- task3 eligible ratio: `0.48`
-- task2 ANC pending rate: `0.36`
-- task3 critical exclusion rate: `0.42`
-
-This keeps the benchmark reproducible while still creating non-trivial decision pressure. Full details: [docs/data_analysis.md](docs/data_analysis.md)
-
-## 📄 License
-
-MIT
-
-## 🧑‍⚕️ Real-World Impact
-
-Clinical trial recruitment remains a major bottleneck in drug development, with protocol screening consuming coordinator time and introducing variability in enrollment decisions. A benchmark like ClinicalTrialEnv can help train and evaluate AI agents that:
-
-- standardize eligibility review
-- surface safety-critical exclusions consistently
-- reduce unnecessary clarification steps
-- adapt to live protocol amendments
-
-That makes the environment directly relevant to production-grade clinical operations tooling, not just benchmark experimentation.
+This environment models a **multi-app professional workflow** where the agent coordinates protocol rules, patient evidence, lab interpretation, medication conflicts, and changing operational logic instead of solving a static puzzle.
