@@ -25,6 +25,13 @@ Training is **environment-driven, not dataset-driven**. The current patient case
 
 This finals submission is a **minimal clinical trial operations extension**. The agent does not just screen one patient; it must also react to a protocol amendment, schedule a valid follow-up visit, and handle a safety-critical seizure-symptom event. That makes the demo legible to mentors and judges while keeping the reward verifiable and the trajectory short enough for RL training.
 
+## Quick Links
+
+- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
+- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- **Colab notebook:** [training/phase1_colab.ipynb](training/phase1_colab.ipynb)
+- **Short finals pitch deck:** [docs/ClinicalTrialEnv_Finals_Pitch.pptx](docs/ClinicalTrialEnv_Finals_Pitch.pptx)
+
 ## Finalist Upgrade
 
 - Rewarding dense intermediate behavior has been replaced by a **single terminal verifier**.
@@ -159,6 +166,12 @@ python -m venv .venv
 
 For a notebook workflow, use [training/phase1_colab.ipynb](training/phase1_colab.ipynb).
 
+For a faster finals-focused comparison on the showcase task only:
+
+```bash
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --output artifacts/eval/trained_task3_eval.json
+```
+
 ## Judging Artifacts
 
 The repo is set up to produce the two required evidence visuals:
@@ -195,6 +208,7 @@ The key story for judges is simple: the agent must screen correctly, notice the 
 Current local evidence artifacts:
 
 - [Baseline eval JSON](artifacts/eval/baseline_eval.json)
+- [Task 3 fallback reference JSON](artifacts/eval/fallback_task3_eval.json)
 - [Trained eval JSON](artifacts/eval/trained_eval.json)
 - [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
 - [Training reward curve](artifacts/plots/training_reward_curve.png)
@@ -210,6 +224,8 @@ Current local evidence artifacts:
 | Mean training reward (logged run) | n/a | -1.0000 |
 
 These numbers come from the existing local sanity-run artifacts. The training pipeline is real and reproducible, but this checkpoint is not yet the final tuned submission model.
+
+For finals-only walkthroughs, the repo also includes a dedicated Task 3 fallback reference artifact so the showcase workflow can be compared separately from the simpler validation tasks.
 
 ### Embedded Evidence
 
@@ -239,6 +255,13 @@ The service is packaged for Docker/Hugging Face Spaces and listens on port `7860
 .venv/Scripts/openenv.exe validate
 docker build -t clinicaltrial-env .
 ```
+
+## Why This Should Win
+
+- It models a **real professional workflow**, not a toy game or static rules quiz.
+- The core reward is **verifier-based and safety-critical**, so judges can inspect why a policy won or failed.
+- The seeded Task 3 demo is **easy to follow in under two minutes** and shows amendment handling, scheduling, and escalation clearly.
+- The repo already bundles the full finalist package: environment, demo, training script, evaluation artifacts, plots, and a short pitch deck.
 
 ## Why This Fits The Scaler Bonus Direction
 

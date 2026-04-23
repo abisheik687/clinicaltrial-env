@@ -232,14 +232,13 @@ def collect_rollouts(
         task="text-generation",
         model=model_name,
         tokenizer=tokenizer,
-        max_new_tokens=max_new_tokens,
         do_sample=False,
         return_full_text=False,
     )
     dataset = build_prompt_dataset(task_id=task_id, seed_start=min(seeds), num_episodes=len(seeds), max_actions=max_actions)
     rollouts: list[dict[str, Any]] = []
     for prompt, seed_value in zip(dataset["prompt"], dataset["seed"], strict=True):
-        completion = generator(prompt, num_return_sequences=1)[0]["generated_text"]
+        completion = generator(prompt, num_return_sequences=1, max_new_tokens=max_new_tokens)[0]["generated_text"]
         try:
             trajectory = parse_trajectory_completion(completion, max_actions=max_actions)
             reward_value, final_payload = replay_trajectory(task_id, int(seed_value), trajectory)

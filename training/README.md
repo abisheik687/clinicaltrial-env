@@ -22,7 +22,7 @@ This folder contains the Phase 1 training-first workflow for the finalist versio
 ```bash
 python training/evaluate_models.py --policy fallback --output artifacts/eval/baseline_eval.json
 python training/grpo_phase1.py --env-url http://localhost:7860 --output-dir artifacts/phase1_grpo
-python training/evaluate_models.py --policy model --model-name path/to/checkpoint --output artifacts/eval/trained_eval.json
+python training/evaluate_models.py --policy local_model --model-name path/to/checkpoint --output artifacts/eval/trained_eval.json
 python training/plot_results.py
 ```
 

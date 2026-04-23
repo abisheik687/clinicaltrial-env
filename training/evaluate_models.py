@@ -38,7 +38,6 @@ class LocalModelClient:
             task="text-generation",
             model=AutoModelForCausalLM.from_pretrained(model_name),
             tokenizer=self.tokenizer,
-            max_new_tokens=max_new_tokens,
             return_full_text=False,
         )
 
@@ -54,15 +53,35 @@ class LocalModelClient:
         prompt = self._build_prompt(observation, reward, history, step)
         content: str | None = None
         try:
-            generated = self.generator(prompt, num_return_sequences=1, do_sample=False)
+            generated = self.generator(
+                prompt,
+                num_return_sequences=1,
+                do_sample=False,
+                max_new_tokens=self.max_new_tokens,
+            )
             content = generated[0]["generated_text"]
-            return inference.parse_action_payload(content)
+            return inference.stabilize_action(
+                inference.parse_action_payload(content),
+                observation,
+                task_id,
+                action_records,
+            )
         except Exception:
             if content is not None:
                 try:
                     repair_prompt = self._build_repair_prompt(observation, content, step)
-                    repaired = self.generator(repair_prompt, num_return_sequences=1, do_sample=False)
-                    return inference.parse_action_payload(repaired[0]["generated_text"])
+                    repaired = self.generator(
+                        repair_prompt,
+                        num_return_sequences=1,
+                        do_sample=False,
+                        max_new_tokens=self.max_new_tokens,
+                    )
+                    return inference.stabilize_action(
+                        inference.parse_action_payload(repaired[0]["generated_text"]),
+                        observation,
+                        task_id,
+                        action_records,
+                    )
                 except Exception:
                     pass
         return inference.build_fallback_action(observation, task_id, action_records)
@@ -202,6 +221,8 @@ async def main_async(args: argparse.Namespace) -> None:
         {"task_id": "task2", "max_steps": 14},
         {"task_id": "task3", "max_steps": 20},
     ]
+    requested_task_ids = {task_id.strip() for task_id in args.task_ids.split(",") if task_id.strip()}
+    tasks = [task for task in tasks if task["task_id"] in requested_task_ids]
     async with httpx.AsyncClient(base_url=args.env_url) as env_client:
         episodes: list[dict[str, Any]] = []
         for task in tasks:
@@ -221,7 +242,12 @@ async def main_async(args: argparse.Namespace) -> None:
         "model": args.model_name,
         "seed_start": args.seed_start,
         "num_seeds": args.num_seeds,
+        "task_ids": [task["task_id"] for task in tasks],
         "aggregate": aggregate(episodes),
+        "aggregate_by_task": {
+            task["task_id"]: aggregate([episode for episode in episodes if episode["task_id"] == task["task_id"]])
+            for task in tasks
+        },
         "episodes": episodes,
     }
     output_path = Path(args.output)
@@ -238,6 +264,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-url", default=inference.ENV_BASE_URL)
     parser.add_argument("--seed-start", type=int, default=200)
     parser.add_argument("--num-seeds", type=int, default=5)
+    parser.add_argument("--task-ids", default="task1,task2,task3")
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--output", default="artifacts/eval/baseline_eval.json")
     return parser.parse_args()

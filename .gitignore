@@ -14,3 +14,6 @@ build/
 .codex-uvicorn*.log
 artifacts/phase1_grpo/checkpoint-*/
 artifacts/phase1_grpo/model/
+artifacts/eval/*.log
+artifacts/eval/*.log.err
+docs/deck_builder/node_modules/
