@@ -1,0 +1,466 @@
+{
+  "policy": "local_model",
+  "model": "E:\\Users\\Abisheik\\downloads\\meta Hackathon\\artifacts\\phase1_grpo\\model",
+  "seed_start": 200,
+  "num_seeds": 1,
+  "aggregate": {
+    "success_rate": 0.3333,
+    "unsafe_rate": 0.0,
+    "amendment_recovery_rate": 1.0
+  },
+  "episodes": [
+    {
+      "task_id": "task1",
+      "seed": 200,
+      "steps": 8,
+      "final_reward": -0.05,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "diagnostic_metrics": {
+        "criterion_evaluation_accuracy": 1.0,
+        "clarification_efficiency": 1.0,
+        "unsafe_action_rate": 0.0,
+        "amendment_recovery_rate": 1.0
+      },
+      "trajectory": [
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "The patient's systolic blood pressure was found to be within the normal range."
+          },
+          "confidence_score": 1.0
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "evaluation": {
+            "criterion_id": "INC-002",
+            "verdict": "met",
+            "reasoning": "ICD-10 is I10 and diagnosis duration is about 22.9 months."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "The patient's systolic blood pressure was found to be within the normal range."
+          },
+          "clarification_target": "Yes",
+          "final_decision_reason": "No further clarification needed.",
+          "confidence_score": 1.0
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "Systolic blood pressure is 163.8, checked against the 140-180 mmHg window."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "The patient's systolic blood pressure was found to be within the normal range."
+          },
+          "clarification_target": "Yes",
+          "final_decision_reason": "No further clarification needed.",
+          "confidence_score": 1.0
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-001",
+          "evaluation": {
+            "criterion_id": "EXC-001",
+            "verdict": "not_met",
+            "reasoning": "eGFR is 103.0, so the renal exclusion applies only if it is below 30."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-002",
+          "evaluation": {
+            "criterion_id": "EXC-002",
+            "verdict": "not_met",
+            "reasoning": "Current medications are checked for ACE inhibitors; found []."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "EXC-002",
+          "evaluation": {
+            "criterion_id": "EXC-002",
+            "verdict": "not_met",
+            "reasoning": "Current medications include metformin and levothyroxine, which do not meet the criteria for ACE inhibitors as they are considered contraindications."
+          },
+          "clarification_target": "Yes",
+          "final_decision_reason": "No further clarification needed.",
+          "confidence_score": 1.0
+        }
+      ]
+    },
+    {
+      "task_id": "task2",
+      "seed": 200,
+      "steps": 12,
+      "final_reward": 1.0,
+      "terminal_success": true,
+      "unsafe_action": false,
+      "diagnostic_metrics": {
+        "criterion_evaluation_accuracy": 0.7778,
+        "clarification_efficiency": 1.0,
+        "unsafe_action_rate": 0.0,
+        "amendment_recovery_rate": 1.0
+      },
+      "trajectory": [
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 51, compared with the 18-65 inclusion range."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "evaluation": {
+            "criterion_id": "INC-002",
+            "verdict": "met",
+            "reasoning": "Diagnosis ICD-10 code is C83.3 and must equal C83.3."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "ECOG performance status is 0.0, which must fall between 0 and 2."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-004",
+          "confidence_score": 0.55
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-004",
+          "evaluation": {
+            "criterion_id": "INC-004",
+            "verdict": "met",
+            "reasoning": "ANC is 3.08 and platelets are 236.9, compared with thresholds 1.0 and 75."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "evaluation": {
+            "criterion_id": "INC-005",
+            "verdict": "met",
+            "reasoning": "Disease stage summary is 'Relapsed measurable disease', so measurable disease is inferred from that text."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "evaluation": {
+            "criterion_id": "INC-005",
+            "verdict": "met",
+            "reasoning": "The current dose of levothyroxine is 30.1 mg/day, which falls within the reference range of 1.0 to 7.5 mg/day."
+          },
+          "confidence_score": 0.9
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-001",
+          "evaluation": {
+            "criterion_id": "EXC-001",
+            "verdict": "not_met",
+            "reasoning": "Primary condition text is reviewed for active CNS lymphoma markers."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-002",
+          "evaluation": {
+            "criterion_id": "EXC-002",
+            "verdict": "uncertain",
+            "reasoning": "Prior CAR-T exposure is not explicitly surfaced in the observation, so this remains uncertain."
+          },
+          "confidence_score": 0.45
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-003",
+          "evaluation": {
+            "criterion_id": "EXC-003",
+            "verdict": "uncertain",
+            "reasoning": "Active autoimmune disease requiring systemic treatment is not explicitly exposed in the public observation."
+          },
+          "confidence_score": 0.45
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-004",
+          "evaluation": {
+            "criterion_id": "EXC-004",
+            "verdict": "met",
+            "reasoning": "Prednisone-equivalent daily exposure is estimated at 26.7 mg."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "exclude",
+          "final_decision_reason": "At least one exclusion criterion appears to be present after structured review.",
+          "confidence_score": 0.68
+        }
+      ]
+    },
+    {
+      "task_id": "task3",
+      "seed": 200,
+      "steps": 20,
+      "final_reward": -0.05,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "diagnostic_metrics": {
+        "criterion_evaluation_accuracy": 0.8,
+        "clarification_efficiency": 0.2,
+        "unsafe_action_rate": 0.0,
+        "amendment_recovery_rate": 1.0
+      },
+      "trajectory": [
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 15, compared with the 4-45 inclusion range."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "evaluation": {
+            "criterion_id": "INC-002",
+            "verdict": "met",
+            "reasoning": "MECP2 mutation marker is 1.0 with estimated certainty."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.55
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "CSS score is 23.6 and the valid range is 12-36 after applying amendment state."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-004",
+          "evaluation": {
+            "criterion_id": "INC-004",
+            "verdict": "uncertain",
+            "reasoning": "Prior gene therapy exposure is not directly exposed in the public observation."
+          },
+          "confidence_score": 0.45
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "evaluation": {
+            "criterion_id": "INC-005",
+            "verdict": "met",
+            "reasoning": "ALT is 42.1 and AST is 59.3, both compared with three times their reference upper limits."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "ask_clarification",
+          "criterion_id": "INC-003",
+          "evaluation": {
+            "criterion_id": "INC-003",
+            "verdict": "met",
+            "reasoning": "The patient's age falls within the 4-45 inclusive range."
+          },
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        }
+      ]
+    }
+  ]
+}

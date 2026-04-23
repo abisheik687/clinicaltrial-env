@@ -263,6 +263,53 @@
       background: #fbfdff;
       margin-bottom: 14px;
     }
+    .guide-box {
+      border: 1px solid #bfd4ee;
+      border-radius: 14px;
+      padding: 14px;
+      background: #f7fbff;
+      margin-bottom: 14px;
+    }
+    .guide-box h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+    .guide-callout {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .guide-steps {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .guide-step {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .guide-step.current {
+      border-color: #90b4d7;
+      background: #eef6ff;
+    }
+    .guide-step strong {
+      display: inline;
+      margin-right: 6px;
+    }
+    .guide-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
     .status-row {
       display: flex;
       justify-content: space-between;
@@ -380,6 +427,17 @@
             <div class="status-row"><span>Current step</span><strong id="stepMeta">0 / 20</strong></div>
           </div>
 
+          <div class="guide-box">
+            <div class="status-row" style="margin-bottom: 10px;">
+              <h3 style="margin: 0;">Guided Demo</h3>
+              <button class="ghost" id="playGuidedDemoButton" type="button">Play Guided Demo</button>
+            </div>
+            <div id="guidedSummary" class="subtle">Loading the fixed seed-44 walkthrough.</div>
+            <div id="guidedNextAction" class="guide-callout">The demo will tell the judge what to click next and why it matters.</div>
+            <div id="guidedSteps" class="guide-steps"></div>
+            <div class="guide-meta">Correct path: safe enroll, schedule day 8, then escalate the seizure-symptom event.</div>
+          </div>
+
           <div class="controls">
             <div class="button-grid">
               <button id="inspectPatientButton">Inspect Patient</button>
@@ -469,6 +527,9 @@
     const totalRewardEl = document.getElementById('totalReward');
     const episodeStatusEl = document.getElementById('episodeStatus');
     const stepMetaEl = document.getElementById('stepMeta');
+    const guidedSummaryEl = document.getElementById('guidedSummary');
+    const guidedNextActionEl = document.getElementById('guidedNextAction');
+    const guidedStepsEl = document.getElementById('guidedSteps');
     const criterionSelect = document.getElementById('criterionSelect');
     const clarificationSelect = document.getElementById('clarificationSelect');
     const verdictSelect = document.getElementById('verdictSelect');
@@ -476,6 +537,8 @@
     const safetyResponseSelect = document.getElementById('safetyResponseSelect');
     const rescheduleDayInput = document.getElementById('rescheduleDayInput');
     const reasoningInput = document.getElementById('reasoningInput');
+    const playGuidedDemoButton = document.getElementById('playGuidedDemoButton');
+    let guidedDemoRunning = false;
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -654,6 +717,88 @@
       stepMetaEl.textContent = `${observation.step_number} / ${observation.step_number + observation.steps_remaining}`;
     }
 
+    function getGuideData(observation) {
+      const operationalState = observation?.operational_state || {};
+      const amendmentActive = Boolean(observation?.trial_protocol_summary?.amendment_active);
+      const phase = operationalState.workflow_phase || 'screening';
+      const steps = [
+        {
+          key: 'screening',
+          title: 'Screen the patient',
+          detail: 'Evaluate INC-001 and INC-002 as met, then resolve INC-003 so the workflow can progress.',
+        },
+        {
+          key: 'amendment',
+          title: 'Handle the amendment',
+          detail: 'Once the amendment appears, re-check INC-003 under the updated protocol rule.',
+        },
+        {
+          key: 'followup_scheduling',
+          title: 'Schedule the follow-up',
+          detail: 'After a safe enroll, schedule the follow-up visit on day 8 inside the day 7 to 10 window.',
+        },
+        {
+          key: 'safety_event',
+          title: 'Respond to the safety event',
+          detail: 'When the seizure-symptom alert appears, escalate to the investigator.',
+        },
+      ];
+
+      let currentKey = 'screening';
+      let summary = 'Seed 44 demonstrates the full finals workflow in one bounded episode.';
+      let nextAction = 'Start by evaluating INC-001 as met, then INC-002 as met.';
+
+      if (done) {
+        currentKey = 'complete';
+        summary = 'The walkthrough is complete. Reset or replay it for your next judge or mentor demo.';
+        nextAction = 'Point out the final banner, the total reward, and the recorded safety response.';
+      } else if (phase === 'safety_event' && operationalState.safety_event_active) {
+        currentKey = 'safety_event';
+        summary = 'The workflow is now in the safety phase with a judge-visible seizure-symptom event.';
+        nextAction = 'Click Handle Safety Event with `escalate` to complete the correct path.';
+      } else if (phase === 'followup_scheduling') {
+        currentKey = 'followup_scheduling';
+        summary = 'Screening is complete and the patient is provisionally enrolled.';
+        nextAction = 'Click Schedule Follow-Up and keep the visit on day 8.';
+      } else if (amendmentActive && operationalState.amendment_review_required) {
+        currentKey = 'amendment';
+        summary = 'The amendment has fired and judges should see the protocol panel highlight.';
+        nextAction = 'Re-evaluate INC-003 as `met` to show that the agent noticed the protocol change.';
+      } else if (amendmentActive) {
+        currentKey = 'screening';
+        summary = 'The amendment is active but the workflow is still in screening.';
+        nextAction = 'Finish the remaining criteria, then click Enroll to continue to scheduling.';
+      }
+
+      return { steps, currentKey, summary, nextAction };
+    }
+
+    function renderGuidedDemo(observation) {
+      if (!observation) {
+        guidedSummaryEl.textContent = 'Loading the fixed seed-44 walkthrough.';
+        guidedNextActionEl.textContent = 'The demo will tell the judge what to click next and why it matters.';
+        guidedStepsEl.innerHTML = '';
+        return;
+      }
+
+      const guide = getGuideData(observation);
+      guidedSummaryEl.textContent = guide.summary;
+      guidedNextActionEl.textContent = guide.nextAction;
+      guidedStepsEl.innerHTML = guide.steps.map((step, index) => `
+        <div class="guide-step ${step.key === guide.currentKey ? 'current' : ''}">
+          <strong>${index + 1}.</strong>${escapeHtml(step.title)}<div class="muted-note">${escapeHtml(step.detail)}</div>
+        </div>
+      `).join('');
+    }
+
+    function setLoadingState(message) {
+      patientPanel.innerHTML = `<div class="item"><strong>Loading demo</strong><div class="muted-note">${escapeHtml(message)}</div></div>`;
+      protocolBody.innerHTML = `<div class="item"><strong>Loading protocol</strong><div class="muted-note">${escapeHtml(message)}</div></div>`;
+      guidedSummaryEl.textContent = message;
+      guidedNextActionEl.textContent = 'If the reset fails, use the Reset Demo Episode button to retry.';
+      guidedStepsEl.innerHTML = '';
+    }
+
     function showFinalBanner(reward) {
       if (!done) {
         finalBanner.className = 'banner';
@@ -690,22 +835,31 @@
     }
 
     async function resetDemo() {
-      const payload = await callApi('/reset', {
-        method: 'POST',
-        body: JSON.stringify({ task_id: DEMO_TASK_ID, seed: DEMO_SEED }),
-      });
-      sessionId = payload.session_id;
-      currentObservation = payload.observation;
-      totalReward = 0;
-      done = false;
-      actionCount = 0;
-      actionLog.innerHTML = '';
-      renderPatient(currentObservation);
-      renderProtocol(currentObservation);
-      populateSelectors(currentObservation);
-      renderStatus(currentObservation);
-      showFinalBanner({ total_reward: 0, unsafe_action: false, terminal_success: false, verifier_feedback: '' });
-      logEntry('Episode reset', 0, `Started ${payload.task_info.name} with seed ${DEMO_SEED}.`, 'Ready for action.');
+      try {
+        setLoadingState('Resetting the fixed seed-44 walkthrough.');
+        const payload = await callApi('/reset', {
+          method: 'POST',
+          body: JSON.stringify({ task_id: DEMO_TASK_ID, seed: DEMO_SEED }),
+        });
+        sessionId = payload.session_id;
+        currentObservation = payload.observation;
+        totalReward = 0;
+        done = false;
+        actionCount = 0;
+        actionLog.innerHTML = '';
+        renderPatient(currentObservation);
+        renderProtocol(currentObservation);
+        populateSelectors(currentObservation);
+        renderStatus(currentObservation);
+        renderGuidedDemo(currentObservation);
+        showFinalBanner({ total_reward: 0, unsafe_action: false, terminal_success: false, verifier_feedback: '' });
+        logEntry('Episode reset', 0, `Started ${payload.task_info.name} with seed ${DEMO_SEED}.`, 'Ready for action.');
+      } catch (error) {
+        currentObservation = null;
+        sessionId = null;
+        setLoadingState(`Reset failed: ${error.message}`);
+        logEntry('Reset failed', 0, `Could not start seed ${DEMO_SEED}.`, error.message);
+      }
     }
 
     async function runAction(action, label, detail) {
@@ -726,10 +880,213 @@
         renderProtocol(currentObservation);
         populateSelectors(currentObservation);
         renderStatus(currentObservation);
+        renderGuidedDemo(currentObservation);
         showFinalBanner(payload.reward);
         logEntry(label, payload.reward.total_reward, detail, payload.reward.verifier_feedback);
       } catch (error) {
         logEntry(`${label} failed`, 0, detail, error.message);
+      }
+    }
+
+    function delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function playGuidedDemo() {
+      if (guidedDemoRunning) return;
+      guidedDemoRunning = true;
+      playGuidedDemoButton.disabled = true;
+      try {
+        await resetDemo();
+        if (!sessionId) return;
+
+        const scriptedActions = [
+          {
+            label: 'Evaluate INC-001',
+            detail: 'Judge path: confirm age eligibility.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-001',
+              evaluation: {
+                criterion_id: 'INC-001',
+                verdict: 'met',
+                reasoning: 'Patient age is 17, which is inside the permitted 4 to 45 year range.',
+              },
+              confidence_score: 0.95,
+            },
+          },
+          {
+            label: 'Evaluate INC-002',
+            detail: 'Judge path: confirm the MECP2 mutation requirement.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-002',
+              evaluation: {
+                criterion_id: 'INC-002',
+                verdict: 'met',
+                reasoning: 'The visible MECP2 mutation marker is positive and satisfies the protocol requirement.',
+              },
+              confidence_score: 0.95,
+            },
+          },
+          {
+            label: 'Clarify INC-003',
+            detail: 'Judge path: request the pending Rett severity score before the amendment.',
+            action: {
+              action_type: 'ask_clarification',
+              clarification_target: 'INC-003',
+              confidence_score: 0.8,
+            },
+          },
+          {
+            label: 'Re-check INC-003',
+            detail: 'Judge path: show that the agent re-evaluates the amended criterion.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-003',
+              evaluation: {
+                criterion_id: 'INC-003',
+                verdict: 'met',
+                reasoning: 'The clarified CSS score is 16.1, which remains inside the amended 10 to 36 range.',
+              },
+              confidence_score: 0.95,
+            },
+          },
+          {
+            label: 'Evaluate INC-004',
+            detail: 'Judge path: finish the remaining inclusion checks.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-004',
+              evaluation: {
+                criterion_id: 'INC-004',
+                verdict: 'met',
+                reasoning: 'No prior gene therapy exposure is present for this seeded case.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate INC-005',
+            detail: 'Judge path: confirm hepatic function stays within the protocol allowance.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-005',
+              evaluation: {
+                criterion_id: 'INC-005',
+                verdict: 'met',
+                reasoning: 'ALT and AST remain below three times the protocol upper limit, so hepatic eligibility is preserved.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate INC-006',
+            detail: 'Judge path: confirm the weight threshold.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'INC-006',
+              evaluation: {
+                criterion_id: 'INC-006',
+                verdict: 'met',
+                reasoning: 'Weight is 35.3 kg, which is above the 13 kg minimum.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate EXC-001',
+            detail: 'Judge path: confirm there is no uncontrolled seizure exclusion before the later safety event.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'EXC-001',
+              evaluation: {
+                criterion_id: 'EXC-001',
+                verdict: 'not_met',
+                reasoning: 'The seeded case does not have an uncontrolled seizure disorder at screening.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate EXC-002',
+            detail: 'Judge path: confirm no AAV hypersensitivity.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'EXC-002',
+              evaluation: {
+                criterion_id: 'EXC-002',
+                verdict: 'not_met',
+                reasoning: 'The seeded case does not show AAV hypersensitivity.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate EXC-003',
+            detail: 'Judge path: confirm no competing interventional trial.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'EXC-003',
+              evaluation: {
+                criterion_id: 'EXC-003',
+                verdict: 'not_met',
+                reasoning: 'There is no concurrent interventional trial enrollment in this seeded case.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Evaluate EXC-004',
+            detail: 'Judge path: confirm life expectancy is not an exclusion.',
+            action: {
+              action_type: 'evaluate_criterion',
+              criterion_id: 'EXC-004',
+              evaluation: {
+                criterion_id: 'EXC-004',
+                verdict: 'not_met',
+                reasoning: 'Life expectancy is above 12 months for this seeded patient.',
+              },
+              confidence_score: 0.9,
+            },
+          },
+          {
+            label: 'Enroll',
+            detail: 'Judge path: safe enrollment after the amended review.',
+            action: {
+              action_type: 'enroll',
+              final_decision_reason: 'All inclusion criteria are met, no exclusions are active, and the amendment was handled correctly.',
+              confidence_score: 0.96,
+            },
+          },
+          {
+            label: 'Schedule Follow-Up',
+            detail: 'Judge path: use the clean day-8 follow-up inside the allowed window.',
+            action: {
+              action_type: 'schedule_followup',
+              followup_day: 8,
+              confidence_score: 0.84,
+            },
+          },
+          {
+            label: 'Handle Safety Event',
+            detail: 'Judge path: escalate the seizure-symptom event to the investigator.',
+            action: {
+              action_type: 'handle_safety_event',
+              safety_response: 'escalate',
+              confidence_score: 0.9,
+            },
+          },
+        ];
+
+        for (const step of scriptedActions) {
+          await delay(350);
+          await runAction(step.action, step.label, step.detail);
+          if (done) break;
+        }
+      } finally {
+        guidedDemoRunning = false;
+        playGuidedDemoButton.disabled = false;
       }
     }
 
@@ -738,6 +1095,7 @@
     }
 
     document.getElementById('resetButton').addEventListener('click', resetDemo);
+    playGuidedDemoButton.addEventListener('click', playGuidedDemo);
     document.getElementById('inspectPatientButton').addEventListener('click', () => {
       runAction({ action_type: 'inspect_patient', confidence_score: 0.5 }, 'Inspect Patient', 'Refreshed patient-facing evidence.');
     });

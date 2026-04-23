@@ -23,6 +23,8 @@ This finalist version is framed for **OpenEnv Theme 3.1: Professional Tasks**. T
 
 Training is **environment-driven, not dataset-driven**. The current patient cases are **synthetic, seed-deterministic, and generated inside the environment** so the same episode can be replayed exactly for training, evaluation, and demos. External data grounding is intentionally deferred until after real training evidence exists.
 
+This finals submission is a **minimal clinical trial operations extension**. The agent does not just screen one patient; it must also react to a protocol amendment, schedule a valid follow-up visit, and handle a safety-critical seizure-symptom event. That makes the demo legible to mentors and judges while keeping the reward verifiable and the trajectory short enough for RL training.
+
 ## Finalist Upgrade
 
 - Rewarding dense intermediate behavior has been replaced by a **single terminal verifier**.
@@ -37,6 +39,15 @@ Training is **environment-driven, not dataset-driven**. The current patient case
   - `training/evaluate_models.py`
   - `training/plot_results.py`
   - `training/phase1_colab.ipynb`
+
+## Round 1 To Finals
+
+| Area | Round 1 | Finals submission |
+| --- | --- | --- |
+| Problem framing | Screening benchmark | Screening plus amendment, follow-up scheduling, and safety escalation |
+| Reward | Dense shaped reward | Verifier-style terminal reward with explicit workflow components |
+| Demo | Basic landing page | Interactive operations demo with a fixed seed-44 walkthrough |
+| Training proof | No RL evidence package | Baseline eval, GRPO log, held-out eval, and plots |
 
 ## Environment Overview
 
@@ -165,15 +176,46 @@ The intended demo episode is a seeded Task 3 workflow where judges can see:
 - the scheduled follow-up day
 - the seizure-symptom safety event and the response decision
 
+## Judge Walkthrough
+
+Use the seed-44 demo in the Space or local app. The expected correct path is:
+
+1. evaluate `INC-001` as `met`
+2. evaluate `INC-002` as `met`
+3. request clarification for `INC-003` or inspect the protocol until the amendment notice appears
+4. re-check `INC-003` as `met`
+5. finish the remaining criteria, then `enroll`
+6. schedule the follow-up visit on **day 8**
+7. respond to the seizure-symptom event with **investigator escalation**
+
+The key story for judges is simple: the agent must screen correctly, notice the protocol change, schedule safely inside the allowed window, and escalate a safety event instead of ignoring it.
+
 ## Results
 
-Add these committed artifacts before finals submission:
+Current local evidence artifacts:
 
-- `artifacts/eval/baseline_eval.json`
-- `artifacts/phase1_grpo/train_log_history.json`
-- `artifacts/eval/trained_eval.json`
-- `artifacts/plots/training_reward_curve.png`
-- `artifacts/plots/heldout_base_vs_trained.png`
+- [Baseline eval JSON](artifacts/eval/baseline_eval.json)
+- [Trained eval JSON](artifacts/eval/trained_eval.json)
+- [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
+- [Training reward curve](artifacts/plots/training_reward_curve.png)
+- [Held-out comparison chart](artifacts/plots/heldout_base_vs_trained.png)
+
+### Current Metrics
+
+| Metric | Fallback baseline | Current local checkpoint |
+| --- | ---: | ---: |
+| Success rate | 0.6667 | 0.3333 |
+| Unsafe rate | 0.0000 | 0.0000 |
+| Amendment recovery rate | 1.0000 | 1.0000 |
+| Mean training reward (logged run) | n/a | -1.0000 |
+
+These numbers come from the existing local sanity-run artifacts. The training pipeline is real and reproducible, but this checkpoint is not yet the final tuned submission model.
+
+### Embedded Evidence
+
+![Training reward curve](artifacts/plots/training_reward_curve.png)
+
+![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
 
 README pass criteria for judges:
 
