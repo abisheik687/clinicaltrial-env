@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from server.models.action import ActionType, ScreeningAction
+from clinicaltrial_env.action import ActionType, ScreeningAction
 
 ALLOWED_TRAJECTORY_ACTIONS = {
     ActionType.EVALUATE_CRITERION,
@@ -70,7 +70,15 @@ def summarize_observation(observation: dict[str, Any]) -> str:
     return json.dumps(compact_summary, separators=(",", ":"), default=str)
 
 
-def build_episode_prompt(
+def build_episode_system_prompt() -> str:
+    return (
+        "You are a clinical trial workflow planning model.\n"
+        "Return exactly one compact JSON object with a `trajectory` list and no markdown or commentary.\n"
+        "The first non-whitespace character of your reply must be `{`."
+    )
+
+
+def build_episode_user_message(
     observation: dict[str, Any],
     task_id: str,
     seed: int | None,
@@ -107,8 +115,6 @@ def build_episode_prompt(
         ]
     }
     return (
-        "You are operating inside Clinical Trial Operations Arena.\n"
-        "Return only one compact JSON object with a full episode trajectory.\n"
         f"Task={task_id}; seed={seed_value}; max_actions={max_actions}.\n"
         "Allowed action_type values only: evaluate_criterion, ask_clarification, enroll, exclude, "
         "schedule_followup, handle_safety_event.\n"
@@ -125,6 +131,27 @@ def build_episode_prompt(
         "Episode observation:\n"
         f"{summarize_observation(observation)}"
     )
+
+
+def build_episode_prompt(
+    observation: dict[str, Any],
+    task_id: str,
+    seed: int | None,
+    max_actions: int,
+    tokenizer: Any | None = None,
+) -> str:
+    system_prompt = build_episode_system_prompt()
+    user_prompt = build_episode_user_message(observation, task_id, seed, max_actions)
+    if tokenizer is not None and hasattr(tokenizer, "apply_chat_template"):
+        return tokenizer.apply_chat_template(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    return f"{system_prompt}\n\n{user_prompt}"
 
 
 def extract_json_block(text: str) -> str:

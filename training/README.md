@@ -13,14 +13,16 @@ This folder contains the Phase 1 training-first workflow for the finalist versio
 
 1. Start the environment locally or on a private Hugging Face Space.
 2. Run the Task 3 fallback evaluator.
-3. Run the Phase 1 GRPO script against `task3`.
-4. Evaluate the trained checkpoint on the same held-out Task 3 seeds.
-5. Generate plots from the saved logs.
+3. Run the raw base-model Task 3 evaluator.
+4. Run the Phase 1 GRPO script against `task3`.
+5. Evaluate the trained checkpoint on the same held-out Task 3 seeds.
+6. Generate plots from the saved logs.
 
 ## Example commands
 
 ```bash
 python training/evaluate_models.py --policy fallback --task-ids task3 --output artifacts/eval/fallback_task3_eval.json
+python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --output artifacts/eval/base_model_task3_eval.json
 python training/grpo_phase1.py --env-url http://localhost:7860 --output-dir artifacts/phase1_grpo
 python training/evaluate_models.py --policy local_model --model-name path/to/checkpoint --task-ids task3 --output artifacts/eval/trained_task3_eval.json
 python training/plot_results.py
@@ -30,4 +32,5 @@ python training/plot_results.py
 
 - The training script intentionally targets the minimal single-patient Task 3 workflow first.
 - The terminal verifier lives inside the environment; the trainer only reads `env.reward`.
+- The plotting script prefers `base_model_task3_eval.json` as the baseline if it exists, and otherwise falls back to the heuristic Task 3 reference.
 - If GRPO does not improve held-out success after two checkpoints, simplify the task distribution before adding any new shaping terms.

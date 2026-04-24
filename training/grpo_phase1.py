@@ -31,7 +31,6 @@ if os.name == "nt" and not sys.flags.utf8_mode:
 from trl import GRPOConfig, GRPOTrainer
 
 import inference
-from server.models.action import ScreeningAction
 from training.trajectory_helpers import (
     build_episode_prompt,
     normalize_completion_text,
@@ -46,7 +45,7 @@ DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 INVALID_COMPLETION_REWARD = -1.0
 
 
-def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_actions: int) -> Dataset:
+def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_actions: int, tokenizer: Any | None = None) -> Dataset:
     prompts: list[str] = []
     task_ids: list[str] = []
     seeds: list[int] = []
@@ -56,7 +55,7 @@ def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_a
             response = client.post("/reset", json={"task_id": task_id, "seed": seed})
             response.raise_for_status()
             data = response.json()
-            prompts.append(build_episode_prompt(data["observation"], task_id, seed, max_actions))
+            prompts.append(build_episode_prompt(data["observation"], task_id, seed, max_actions, tokenizer=tokenizer))
             task_ids.append(task_id)
             seeds.append(seed)
     return Dataset.from_dict({"prompt": prompts, "task_id": task_ids, "seed": seeds})
@@ -141,6 +140,7 @@ def collect_rollouts(
                 task_id=task_id,
                 seed=int(seed_value),
                 max_actions=max_actions,
+                tokenizer=tokenizer,
             )
         inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {key: value.to(model.device) for key, value in inputs.items()}
@@ -228,13 +228,12 @@ def main() -> None:
     ACTIVE_DEFAULT_TASK_ID = args.task_id
 
     set_seed(args.seed)
-    dataset = build_prompt_dataset(args.task_id, args.seed_start, args.num_episodes, args.max_actions)
-    output_dir = Path(args.output_dir)
-
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
+    dataset = build_prompt_dataset(args.task_id, args.seed_start, args.num_episodes, args.max_actions, tokenizer=tokenizer)
+    output_dir = Path(args.output_dir)
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         low_cpu_mem_usage=False,

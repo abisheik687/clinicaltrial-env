@@ -55,6 +55,7 @@ This finals submission is a **minimal clinical trial operations extension**. The
 | Reward | Dense shaped reward | Verifier-style terminal reward with explicit workflow components |
 | Demo | Basic landing page | Interactive operations demo with a fixed seed-44 walkthrough |
 | Training proof | No RL evidence package | Baseline eval, GRPO log, held-out eval, and plots |
+| Client/server boundary | Shared logic mixed with server imports | Client-safe shared action schemas with the server boundary preserved |
 
 ## Environment Overview
 
@@ -146,19 +147,25 @@ python -m venv .venv
 .venv/Scripts/python training/evaluate_models.py --policy fallback --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/fallback_task3_eval.json
 ```
 
-3. Run Phase 1 GRPO:
+3. Run the raw base-model baseline:
+
+```bash
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --num-seeds 3 --seed-start 200 --max-new-tokens 96 --output artifacts/eval/base_model_task3_eval.json
+```
+
+4. Run Phase 1 GRPO:
 
 ```bash
 .venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --output-dir artifacts/phase1_grpo
 ```
 
-4. Evaluate the trained checkpoint:
+5. Evaluate the trained checkpoint:
 
 ```bash
 .venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --max-new-tokens 96 --output artifacts/eval/trained_task3_eval.json
 ```
 
-5. Generate the judging plots:
+6. Generate the judging plots:
 
 ```bash
 .venv/Scripts/python training/plot_results.py
@@ -201,6 +208,7 @@ The key story for judges is simple: the agent must screen correctly, notice the 
 
 Current local evidence artifacts:
 
+- [Task 3 base-model JSON](artifacts/eval/base_model_task3_eval.json)
 - [Task 3 fallback reference JSON](artifacts/eval/fallback_task3_eval.json)
 - [Task 3 trained checkpoint JSON](artifacts/eval/trained_task3_eval.json)
 - [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
@@ -209,23 +217,31 @@ Current local evidence artifacts:
 
 ### Current Metrics
 
-| Metric | Fallback baseline | Current local checkpoint |
-| --- | ---: | ---: |
-| Success rate | 0.3333 | 0.3333 |
-| Unsafe rate | 0.0000 | 0.0000 |
-| Mean final reward | 0.6667 | 0.6667 |
-| Amendment recovery rate | 1.0000 | 1.0000 |
-| Mean training reward (logged run) | n/a | -1.0000 |
+| Metric | Heuristic reference | Raw base model | Current local checkpoint |
+| --- | ---: | ---: | ---: |
+| Success rate | 0.3333 | 0.3333 | 0.3333 |
+| Unsafe rate | 0.0000 | 0.0000 | 0.0000 |
+| Mean final reward | 0.6667 | 0.6667 | 0.6667 |
+| Amendment recovery rate | 1.0000 | 1.0000 | 1.0000 |
+| Mean training reward (logged run) | n/a | n/a | -1.0000 |
 
-These numbers come from the latest **aligned Task 3 local refresh**. The environment, guided demo, and evaluator are now comparing the fallback reference and the local checkpoint on the same finals showcase task. The honest result is that the current checkpoint **matches but does not beat** the fallback reference yet.
+These numbers come from the latest **aligned Task 3 local refresh**. The environment, guided demo, and evaluator are now comparing three aligned references on the same finals showcase task:
+
+- the heuristic walkthrough policy
+- the raw `Qwen/Qwen2.5-0.5B-Instruct` base model
+- the current GRPO checkpoint
+
+The honest result is that the current checkpoint **still matches, but does not beat**, either the heuristic reference or the raw base model yet.
 
 That means the remaining competitive gap is not the environment shell anymore; it is the final **Colab GPU training rerun** needed to replace this interim checkpoint with a stronger trained model and refreshed reward curve.
 
 ### Embedded Evidence
 
 ![Training reward curve](artifacts/plots/training_reward_curve.png)
+Training reward from the current local GRPO sanity run. This confirms end-to-end training execution, but it is not yet the final tuned reward curve.
 
 ![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
+Task 3 comparison chart generated from the latest aligned local eval artifacts.
 
 README pass criteria for judges:
 

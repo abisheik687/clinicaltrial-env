@@ -98,6 +98,7 @@ class LocalModelClient:
             task_id=task_id,
             seed=None,
             max_actions=max_actions,
+            tokenizer=self.tokenizer,
         )
         generated_text = self._generate_text(prompt)
         self.planned_trajectories[patient_id] = parse_trajectory_completion(generated_text, max_actions=max_actions)

@@ -1,4 +1,4 @@
-"""Backward-compatible shim for shared action models."""
+"""Shared client-safe schemas and helpers for ClinicalTrialEnv."""
 
 from clinicaltrial_env.action import ActionType, CriterionEvaluation, ScreeningAction
 
