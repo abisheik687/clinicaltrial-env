@@ -143,7 +143,7 @@ python -m venv .venv
 2. Run a held-out baseline:
 
 ```bash
-.venv/Scripts/python training/evaluate_models.py --policy fallback --output artifacts/eval/baseline_eval.json
+.venv/Scripts/python training/evaluate_models.py --policy fallback --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/fallback_task3_eval.json
 ```
 
 3. Run Phase 1 GRPO:
@@ -155,7 +155,7 @@ python -m venv .venv
 4. Evaluate the trained checkpoint:
 
 ```bash
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --output artifacts/eval/trained_eval.json
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --max-new-tokens 96 --output artifacts/eval/trained_task3_eval.json
 ```
 
 5. Generate the judging plots:
@@ -165,12 +165,6 @@ python -m venv .venv
 ```
 
 For a notebook workflow, use [training/phase1_colab.ipynb](training/phase1_colab.ipynb).
-
-For a faster finals-focused comparison on the showcase task only:
-
-```bash
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --output artifacts/eval/trained_task3_eval.json
-```
 
 ## Judging Artifacts
 
@@ -207,9 +201,8 @@ The key story for judges is simple: the agent must screen correctly, notice the 
 
 Current local evidence artifacts:
 
-- [Baseline eval JSON](artifacts/eval/baseline_eval.json)
 - [Task 3 fallback reference JSON](artifacts/eval/fallback_task3_eval.json)
-- [Trained eval JSON](artifacts/eval/trained_eval.json)
+- [Task 3 trained checkpoint JSON](artifacts/eval/trained_task3_eval.json)
 - [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
 - [Training reward curve](artifacts/plots/training_reward_curve.png)
 - [Held-out comparison chart](artifacts/plots/heldout_base_vs_trained.png)
@@ -218,14 +211,15 @@ Current local evidence artifacts:
 
 | Metric | Fallback baseline | Current local checkpoint |
 | --- | ---: | ---: |
-| Success rate | 0.6667 | 0.3333 |
+| Success rate | 0.3333 | 0.3333 |
 | Unsafe rate | 0.0000 | 0.0000 |
+| Mean final reward | 0.6667 | 0.6667 |
 | Amendment recovery rate | 1.0000 | 1.0000 |
 | Mean training reward (logged run) | n/a | -1.0000 |
 
-These numbers come from the existing local sanity-run artifacts. The training pipeline is real and reproducible, but this checkpoint is not yet the final tuned submission model.
+These numbers come from the latest **aligned Task 3 local refresh**. The environment, guided demo, and evaluator are now comparing the fallback reference and the local checkpoint on the same finals showcase task. The honest result is that the current checkpoint **matches but does not beat** the fallback reference yet.
 
-For finals-only walkthroughs, the repo also includes a dedicated Task 3 fallback reference artifact so the showcase workflow can be compared separately from the simpler validation tasks.
+That means the remaining competitive gap is not the environment shell anymore; it is the final **Colab GPU training rerun** needed to replace this interim checkpoint with a stronger trained model and refreshed reward curve.
 
 ### Embedded Evidence
 
@@ -237,6 +231,7 @@ README pass criteria for judges:
 
 - the Hugging Face Space root URL renders the interactive **Clinical Trial Operations Arena** demo
 - the `/health` endpoint returns `{"status":"ok", ...}`
+- the seed-44 walkthrough can reach terminal success with: amendment re-check, safe enroll, day-8 follow-up, and safety escalation
 
 ## API
 
@@ -255,6 +250,13 @@ The service is packaged for Docker/Hugging Face Spaces and listens on port `7860
 .venv/Scripts/openenv.exe validate
 docker build -t clinicaltrial-env .
 ```
+
+Current local status:
+
+- `pytest -q`: passing (`44 passed`)
+- `openenv validate`: passing
+- local seed-44 API walkthrough: passing with terminal success
+- `docker build`: requires Docker Desktop / daemon to be running on the local machine
 
 ## Why This Should Win
 

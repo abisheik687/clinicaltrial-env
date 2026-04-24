@@ -19,6 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import inference
+from training.trajectory_helpers import build_episode_prompt, parse_trajectory_completion
 
 
 class FallbackOnlyClient:
@@ -26,20 +27,28 @@ class FallbackOnlyClient:
 
 
 class LocalModelClient:
-    """Small wrapper around a local Transformers checkpoint for held-out eval."""
+    """Evaluate local checkpoints with the same full-trajectory format used in GRPO."""
 
     def __init__(self, model_name: str, max_new_tokens: int = 256) -> None:
-        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
+        self.torch = torch
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.generator = pipeline(
-            task="text-generation",
-            model=AutoModelForCausalLM.from_pretrained(model_name),
-            tokenizer=self.tokenizer,
-            return_full_text=False,
-        )
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.padding_side = "left"
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=False)
+        if hasattr(self.model.generation_config, "max_length"):
+            self.model.generation_config.max_length = None
+        for field in ("temperature", "top_p", "top_k"):
+            if hasattr(self.model.generation_config, field):
+                setattr(self.model.generation_config, field, None)
+        self.planned_trajectories: dict[str, list[dict[str, Any]]] = {}
+        self.plan_indices: dict[str, int] = {}
+        self.plan_failures: set[str] = set()
 
     def get_action(
         self,
@@ -50,71 +59,62 @@ class LocalModelClient:
         task_id: str,
         action_records: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        prompt = self._build_prompt(observation, reward, history, step)
-        content: str | None = None
+        del reward, history
+        patient_id = observation["patient_id"]
         try:
-            generated = self.generator(
-                prompt,
-                num_return_sequences=1,
-                do_sample=False,
-                max_new_tokens=self.max_new_tokens,
-            )
-            content = generated[0]["generated_text"]
-            return inference.stabilize_action(
-                inference.parse_action_payload(content),
-                observation,
-                task_id,
-                action_records,
-            )
+            if patient_id in self.plan_failures:
+                return inference.build_fallback_action(observation, task_id, action_records)
+            if patient_id not in self.planned_trajectories or not action_records:
+                self._cache_plan(
+                    patient_id=patient_id,
+                    observation=observation,
+                    task_id=task_id,
+                    max_actions=min(max(observation.get("steps_remaining", 1), 1), 10),
+                )
+            planned_actions = self.planned_trajectories.get(patient_id, [])
+            plan_index = self.plan_indices.get(patient_id, 0)
+            if plan_index < len(planned_actions):
+                planned_action = planned_actions[plan_index]
+                self.plan_indices[patient_id] = plan_index + 1
+                return inference.stabilize_action(
+                    planned_action,
+                    observation,
+                    task_id,
+                    action_records,
+                )
         except Exception:
-            if content is not None:
-                try:
-                    repair_prompt = self._build_repair_prompt(observation, content, step)
-                    repaired = self.generator(
-                        repair_prompt,
-                        num_return_sequences=1,
-                        do_sample=False,
-                        max_new_tokens=self.max_new_tokens,
-                    )
-                    return inference.stabilize_action(
-                        inference.parse_action_payload(repaired[0]["generated_text"]),
-                        observation,
-                        task_id,
-                        action_records,
-                    )
-                except Exception:
-                    pass
+            self.plan_failures.add(patient_id)
         return inference.build_fallback_action(observation, task_id, action_records)
 
-    def _build_prompt(self, observation: dict[str, Any], reward: float, history: list[str], step: int) -> str:
-        if hasattr(self.tokenizer, "apply_chat_template"):
-            return self.tokenizer.apply_chat_template(
-                [
-                    {"role": "system", "content": inference.build_system_prompt()},
-                    {"role": "user", "content": inference.build_user_message(observation, reward, history, step)},
-                ],
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-        return (
-            f"{inference.build_system_prompt()}\n\n"
-            f"{inference.build_user_message(observation, reward, history, step)}\n"
+    def _cache_plan(
+        self,
+        patient_id: str,
+        observation: dict[str, Any],
+        task_id: str,
+        max_actions: int,
+    ) -> None:
+        prompt = build_episode_prompt(
+            observation=observation,
+            task_id=task_id,
+            seed=None,
+            max_actions=max_actions,
         )
+        generated_text = self._generate_text(prompt)
+        self.planned_trajectories[patient_id] = parse_trajectory_completion(generated_text, max_actions=max_actions)
+        self.plan_indices[patient_id] = 0
 
-    def _build_repair_prompt(self, observation: dict[str, Any], invalid_content: str, step: int) -> str:
-        if hasattr(self.tokenizer, "apply_chat_template"):
-            return self.tokenizer.apply_chat_template(
-                [
-                    {"role": "system", "content": inference.build_system_prompt()},
-                    {"role": "user", "content": inference.build_repair_message(observation, invalid_content, step)},
-                ],
-                tokenize=False,
-                add_generation_prompt=True,
+    def _generate_text(self, prompt: str) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt")
+        inputs = {key: value.to(self.model.device) for key, value in inputs.items()}
+        with self.torch.no_grad():
+            generated = self.model.generate(
+                **inputs,
+                do_sample=False,
+                max_new_tokens=self.max_new_tokens,
+                pad_token_id=self.tokenizer.eos_token_id,
             )
-        return (
-            f"{inference.build_system_prompt()}\n\n"
-            f"{inference.build_repair_message(observation, invalid_content, step)}\n"
-        )
+        completion_tokens = generated[0][inputs["input_ids"].shape[1] :]
+        return self.tokenizer.decode(completion_tokens, skip_special_tokens=True)
 
 
 async def run_episode(
@@ -195,15 +195,28 @@ def aggregate(episodes: list[dict[str, Any]]) -> dict[str, float]:
             "success_rate": 0.0,
             "unsafe_rate": 0.0,
             "amendment_recovery_rate": 0.0,
+            "mean_final_reward": 0.0,
         }
     count = len(episodes)
+    metric_names = (
+        "amendment_recovery_rate",
+        "eligibility_component_score",
+        "amendment_component_score",
+        "scheduling_component_score",
+        "safety_component_score",
+    )
+    aggregated = {
+        metric_name: round(
+            sum(float(item["diagnostic_metrics"].get(metric_name, 0.0)) for item in episodes) / count,
+            4,
+        )
+        for metric_name in metric_names
+    }
     return {
         "success_rate": round(sum(1.0 for item in episodes if item["terminal_success"]) / count, 4),
         "unsafe_rate": round(sum(1.0 for item in episodes if item["unsafe_action"]) / count, 4),
-        "amendment_recovery_rate": round(
-            sum(float(item["diagnostic_metrics"].get("amendment_recovery_rate", 0.0)) for item in episodes) / count,
-            4,
-        ),
+        "mean_final_reward": round(sum(float(item["final_reward"]) for item in episodes) / count, 4),
+        **aggregated,
     }
 
 
@@ -239,7 +252,7 @@ async def main_async(args: argparse.Namespace) -> None:
 
     payload = {
         "policy": args.policy,
-        "model": args.model_name,
+        "model": "heuristic-fallback" if args.policy == "fallback" else args.model_name,
         "seed_start": args.seed_start,
         "num_seeds": args.num_seeds,
         "task_ids": [task["task_id"] for task in tasks],
@@ -258,14 +271,14 @@ async def main_async(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate baseline or trained models on held-out seeds.")
     parser.add_argument("--policy", choices=["fallback", "model", "local_model"], default="fallback")
-    parser.add_argument("--model-name", default="Qwen/Qwen2.5-3B-Instruct")
+    parser.add_argument("--model-name", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--api-base-url", default=inference.API_BASE_URL)
     parser.add_argument("--api-key", default=inference.API_KEY)
     parser.add_argument("--env-url", default=inference.ENV_BASE_URL)
     parser.add_argument("--seed-start", type=int, default=200)
     parser.add_argument("--num-seeds", type=int, default=5)
     parser.add_argument("--task-ids", default="task1,task2,task3")
-    parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--max-new-tokens", type=int, default=192)
     parser.add_argument("--output", default="artifacts/eval/baseline_eval.json")
     return parser.parse_args()
 

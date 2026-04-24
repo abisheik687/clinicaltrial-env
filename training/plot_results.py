@@ -14,6 +14,13 @@ def load_json(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def resolve_input_path(primary: str, fallback: str) -> str:
+    primary_path = Path(primary)
+    if primary_path.exists():
+        return str(primary_path)
+    return fallback
+
+
 def extract_reward_series(log_history: list[dict]) -> tuple[list[int], list[float]]:
     steps: list[int] = []
     rewards: list[float] = []
@@ -59,7 +66,7 @@ def save_heldout_bar_chart(baseline_eval: dict, trained_eval: dict, output_path:
     plt.xticks(list(positions), ["Success rate", "Unsafe rate", "Amendment recovery"])
     plt.ylim(0, 1)
     plt.ylabel("Held-out score")
-    plt.title("Held-out Base vs Trained Comparison")
+    plt.title("Task 3 Held-out Base vs Trained Comparison")
     plt.legend()
     plt.grid(axis="y", alpha=0.3)
     plt.tight_layout()
@@ -70,8 +77,8 @@ def save_heldout_bar_chart(baseline_eval: dict, trained_eval: dict, output_path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate reward and held-out comparison plots.")
     parser.add_argument("--train-log", default="artifacts/phase1_grpo/train_log_history.json")
-    parser.add_argument("--baseline-eval", default="artifacts/eval/baseline_eval.json")
-    parser.add_argument("--trained-eval", default="artifacts/eval/trained_eval.json")
+    parser.add_argument("--baseline-eval", default="artifacts/eval/fallback_task3_eval.json")
+    parser.add_argument("--trained-eval", default="artifacts/eval/trained_task3_eval.json")
     parser.add_argument("--output-dir", default="artifacts/plots")
     return parser.parse_args()
 
@@ -82,8 +89,8 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     train_log = load_json(args.train_log)
-    baseline_eval = load_json(args.baseline_eval)
-    trained_eval = load_json(args.trained_eval)
+    baseline_eval = load_json(resolve_input_path(args.baseline_eval, "artifacts/eval/baseline_eval.json"))
+    trained_eval = load_json(resolve_input_path(args.trained_eval, "artifacts/eval/trained_eval.json"))
 
     save_reward_curve(train_log, output_dir / "training_reward_curve.png")
     save_heldout_bar_chart(baseline_eval, trained_eval, output_dir / "heldout_base_vs_trained.png")

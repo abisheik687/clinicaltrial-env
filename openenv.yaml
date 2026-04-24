@@ -36,10 +36,10 @@ tasks:
     max_steps: 14
     description: "Screen a patient for a CAR-T trial with compound marrow checks and medication reasoning."
   - id: task3
-    name: "Ambiguous Gene Therapy Screening with Protocol Amendment"
+    name: "Minimal Clinical Trial Operations Extension"
     difficulty: hard
     max_steps: 20
-    description: "Screen a patient for gene therapy with ambiguous evidence and a mid-episode protocol amendment."
+    description: "Screen a Rett-syndrome gene-therapy case, re-check INC-003 after an amendment, schedule a valid follow-up visit, and escalate a deterministic seizure-symptom safety event."
 
 api:
   framework: fastapi
@@ -59,4 +59,4 @@ deployment:
 baseline:
   script: "training/grpo_phase1.py"
   evaluation_script: "training/evaluate_models.py"
-  model: "Qwen/Qwen2.5-3B-Instruct"
+  model: "Qwen/Qwen2.5-0.5B-Instruct"

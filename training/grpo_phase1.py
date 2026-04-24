@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 import torch
 from datasets import Dataset
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -32,6 +32,11 @@ from trl import GRPOConfig, GRPOTrainer
 
 import inference
 from server.models.action import ScreeningAction
+from training.trajectory_helpers import (
+    build_episode_prompt,
+    normalize_completion_text,
+    parse_trajectory_completion,
+)
 
 
 ACTIVE_ENV_URL = os.environ.get("ENV_URL", "http://localhost:7860")
@@ -39,74 +44,6 @@ ACTIVE_DEFAULT_TASK_ID = "task3"
 ACTIVE_TIMEOUT = 60.0
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 INVALID_COMPLETION_REWARD = -1.0
-
-
-def summarize_observation(observation: dict[str, Any]) -> str:
-    protocol = observation["trial_protocol_summary"]
-    summary = {
-        "patient_id": observation["patient_id"],
-        "step_number": observation["step_number"],
-        "steps_remaining": observation["steps_remaining"],
-        "demographics": observation["demographics"],
-        "diagnosis": observation["diagnosis"],
-        "lab_values": observation["lab_values"],
-        "current_medications": observation["current_medications"],
-        "amendment_active": protocol["amendment_active"],
-        "amendment_description": protocol["amendment_description"],
-        "inclusion_criteria": protocol["inclusion_criteria"],
-        "exclusion_criteria": protocol["exclusion_criteria"],
-        "operational_state": observation.get("operational_state"),
-        "info_message": observation["info_message"],
-    }
-    return json.dumps(summary, indent=2, default=str)
-
-
-def build_episode_prompt(observation: dict[str, Any], task_id: str, seed: int, max_actions: int) -> str:
-    schema = {
-        "trajectory": [
-            {
-                "action_type": "evaluate_criterion",
-                "criterion_id": "INC-001",
-                "evaluation": {
-                    "criterion_id": "INC-001",
-                    "verdict": "met",
-                    "reasoning": "Short clinical justification",
-                },
-                "confidence_score": 0.8,
-            },
-            {
-                "action_type": "ask_clarification",
-                "clarification_target": "INC-003",
-                "confidence_score": 0.6,
-            },
-            {
-                "action_type": "schedule_followup",
-                "followup_day": 8,
-                "confidence_score": 0.9,
-            },
-            {
-                "action_type": "handle_safety_event",
-                "safety_response": "escalate",
-                "confidence_score": 0.9,
-            },
-        ]
-    }
-    return (
-        "You are operating inside Clinical Trial Operations Arena.\n"
-        "Plan the full episode up front and return only one JSON object.\n"
-        f"Task: {task_id}\n"
-        f"Episode seed: {seed}\n"
-        f"Use at most {max_actions} actions.\n"
-        "Use workflow actions when the observation enters followup_scheduling or safety_event.\n"
-        "The final action in task3 should usually be handle_safety_event after a safe enroll.\n"
-        "Each action must match the environment schema exactly.\n"
-        "Ask for clarification only when the criterion is clarifiable and evidence is pending or ambiguous.\n"
-        "Do not include markdown or commentary.\n\n"
-        "JSON schema example:\n"
-        f"{json.dumps(schema, indent=2)}\n\n"
-        "Episode observation:\n"
-        f"{summarize_observation(observation)}\n"
-    )
 
 
 def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_actions: int) -> Dataset:
@@ -124,73 +61,30 @@ def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_a
             seeds.append(seed)
     return Dataset.from_dict({"prompt": prompts, "task_id": task_ids, "seed": seeds})
 
-
-def extract_json_block(text: str) -> str:
-    decoder = json.JSONDecoder()
-    for index, char in enumerate(text):
-        if char not in "[{":
-            continue
-        try:
-            _, end = decoder.raw_decode(text[index:])
-            return text[index : index + end]
-        except json.JSONDecodeError:
-            continue
-    raise ValueError("No valid JSON object found in model completion.")
-
-
-def normalize_completion_text(completion: Any) -> str:
-    if isinstance(completion, str):
-        return completion
-    if isinstance(completion, list):
-        parts: list[str] = []
-        for item in completion:
-            if isinstance(item, dict):
-                parts.append(str(item.get("content", "")))
-            else:
-                parts.append(str(item))
-        return "\n".join(parts)
-    return str(completion)
-
-
-def parse_trajectory_completion(completion_text: str, max_actions: int) -> list[dict[str, Any]]:
-    raw_json = extract_json_block(completion_text.strip())
-    parsed = json.loads(raw_json)
-    if isinstance(parsed, dict):
-        trajectory = parsed.get("trajectory")
-    elif isinstance(parsed, list):
-        trajectory = parsed
-    else:
-        raise ValueError("Completion must decode to a JSON object or list.")
-
-    if not isinstance(trajectory, list) or not trajectory:
-        raise ValueError("Trajectory must be a non-empty list.")
-
-    validated: list[dict[str, Any]] = []
-    for action in trajectory[:max_actions]:
-        validated_action = ScreeningAction.model_validate(action)
-        validated.append(validated_action.model_dump(exclude_none=True))
-    return validated
-
-
 def replay_trajectory(task_id: str, seed: int, trajectory: list[dict[str, Any]]) -> tuple[float, dict[str, Any]]:
     with httpx.Client(base_url=ACTIVE_ENV_URL, timeout=ACTIVE_TIMEOUT) as client:
         reset_response = client.post("/reset", json={"task_id": task_id, "seed": seed})
         reset_response.raise_for_status()
         reset_data = reset_response.json()
         session_id = reset_data["session_id"]
+        observation = reset_data["observation"]
 
         reward_trace: list[float] = []
+        action_records: list[dict[str, Any]] = []
         final_payload: dict[str, Any] = {
             "done": False,
             "reward": {"total_reward": 0.0, "terminal_success": False, "unsafe_action": False},
         }
 
         for action in trajectory:
-            step_response = client.post("/step", json={"session_id": session_id, "action": action})
+            stabilized_action = inference.stabilize_action(action, observation, task_id, action_records)
+            step_response = client.post("/step", json={"session_id": session_id, "action": stabilized_action})
             step_response.raise_for_status()
             step_data = step_response.json()
             reward_trace.append(float(step_data["reward"]["total_reward"]))
             final_payload = step_data
+            observation = step_data["observation"]
+            action_records.append(stabilized_action)
             if step_data["done"]:
                 break
 
@@ -228,17 +122,36 @@ def collect_rollouts(
     max_new_tokens: int,
 ) -> list[dict[str, Any]]:
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    generator = pipeline(
-        task="text-generation",
-        model=model_name,
-        tokenizer=tokenizer,
-        do_sample=False,
-        return_full_text=False,
-    )
-    dataset = build_prompt_dataset(task_id=task_id, seed_start=min(seeds), num_episodes=len(seeds), max_actions=max_actions)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
+    model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=False)
+    if hasattr(model.generation_config, "max_length"):
+        model.generation_config.max_length = None
+    for field in ("temperature", "top_p", "top_k"):
+        if hasattr(model.generation_config, field):
+            setattr(model.generation_config, field, None)
     rollouts: list[dict[str, Any]] = []
-    for prompt, seed_value in zip(dataset["prompt"], dataset["seed"], strict=True):
-        completion = generator(prompt, num_return_sequences=1, max_new_tokens=max_new_tokens)[0]["generated_text"]
+    for seed_value in seeds:
+        with httpx.Client(base_url=ACTIVE_ENV_URL, timeout=ACTIVE_TIMEOUT) as client:
+            response = client.post("/reset", json={"task_id": task_id, "seed": int(seed_value)})
+            response.raise_for_status()
+            prompt = build_episode_prompt(
+                response.json()["observation"],
+                task_id=task_id,
+                seed=int(seed_value),
+                max_actions=max_actions,
+            )
+        inputs = tokenizer(prompt, return_tensors="pt")
+        inputs = {key: value.to(model.device) for key, value in inputs.items()}
+        generated = model.generate(
+            **inputs,
+            do_sample=False,
+            max_new_tokens=max_new_tokens,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+        generated_tokens = generated[0][inputs["input_ids"].shape[1] :]
+        completion = tokenizer.decode(generated_tokens, skip_special_tokens=True)
         try:
             trajectory = parse_trajectory_completion(completion, max_actions=max_actions)
             reward_value, final_payload = replay_trajectory(task_id, int(seed_value), trajectory)
@@ -301,8 +214,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gradient-accumulation-steps", type=int, default=4)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--max-actions", type=int, default=12)
-    parser.add_argument("--max-new-tokens", type=int, default=512)
+    parser.add_argument("--max-actions", type=int, default=10)
+    parser.add_argument("--max-new-tokens", type=int, default=192)
     parser.add_argument("--collect-debug-rollouts", action="store_true")
     return parser.parse_args()
 

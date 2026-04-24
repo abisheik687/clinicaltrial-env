@@ -16,4 +16,5 @@ artifacts/phase1_grpo/checkpoint-*/
 artifacts/phase1_grpo/model/
 artifacts/eval/*.log
 artifacts/eval/*.log.err
+artifacts/server_*.log
 docs/deck_builder/node_modules/

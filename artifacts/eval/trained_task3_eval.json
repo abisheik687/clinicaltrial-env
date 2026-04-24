@@ -1,6 +1,6 @@
 {
-  "policy": "fallback",
-  "model": "heuristic-fallback",
+  "policy": "local_model",
+  "model": "E:\\Users\\Abisheik\\downloads\\meta Hackathon\\artifacts\\phase1_grpo\\model",
   "seed_start": 200,
   "num_seeds": 3,
   "task_ids": [
