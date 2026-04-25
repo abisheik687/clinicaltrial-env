@@ -36,6 +36,7 @@ from training.trajectory_helpers import (
     normalize_completion_text,
     parse_trajectory_completion,
 )
+from training.verify_task3_anchor import replay_anchor
 
 
 ACTIVE_ENV_URL = os.environ.get("ENV_URL", "http://localhost:7860")
@@ -200,6 +201,15 @@ def save_rollout_debug(output_dir: Path, rollouts: list[dict[str, Any]]) -> None
     debug_path.write_text(json.dumps(rollouts, indent=2, default=str), encoding="utf-8")
 
 
+def verify_anchor_gate(env_url: str, output_dir: Path) -> None:
+    """Stop training immediately if the canonical perfect path is broken."""
+    payload = replay_anchor(env_url)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "task3_anchor_verification.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    if not payload["passed"]:
+        raise RuntimeError("Task 3 anchor trajectory failed. Stop training and fix the environment/path first.")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Phase 1 GRPO training against ClinicalTrialEnv task3.")
     parser.add_argument("--model", default=DEFAULT_MODEL)
@@ -234,6 +244,8 @@ def main() -> None:
     tokenizer.padding_side = "left"
     dataset = build_prompt_dataset(args.task_id, args.seed_start, args.num_episodes, args.max_actions, tokenizer=tokenizer)
     output_dir = Path(args.output_dir)
+    if args.task_id == "task3":
+        verify_anchor_gate(ACTIVE_ENV_URL, output_dir)
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         low_cpu_mem_usage=False,

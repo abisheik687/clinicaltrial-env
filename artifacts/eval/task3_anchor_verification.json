@@ -1,0 +1,151 @@
+{
+  "passed": true,
+  "seed": 44,
+  "max_reward": 1.0,
+  "final_reward": {
+    "total_reward": 1.0,
+    "terminal_success": true,
+    "unsafe_action": false,
+    "invalid_action_penalty": 0.0,
+    "diagnostic_metrics": {
+      "criterion_evaluation_accuracy": 1.0,
+      "clarification_efficiency": 1.0,
+      "unsafe_action_rate": 0.0,
+      "amendment_recovery_rate": 1.0,
+      "eligibility_component_score": 1.0,
+      "amendment_component_score": 1.0,
+      "scheduling_component_score": 1.0,
+      "safety_component_score": 1.0
+    },
+    "verifier_feedback": "Workflow completed successfully: eligibility, amendment handling, follow-up scheduling, and safety response all matched the verifier.",
+    "is_final": true
+  },
+  "steps": [
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-001",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-001 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-002",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-002 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "ask_clarification",
+      "criterion_id": null,
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Action recorded."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-003",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-003 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-004",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-004 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-005",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-005 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-006",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion INC-006 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "EXC-001",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion EXC-001 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "EXC-002",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion EXC-002 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "EXC-003",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion EXC-003 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "EXC-004",
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Criterion EXC-004 evaluated correctly under the current protocol."
+    },
+    {
+      "action_type": "enroll",
+      "criterion_id": null,
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Eligibility decision recorded. Continue with follow-up scheduling."
+    },
+    {
+      "action_type": "schedule_followup",
+      "criterion_id": null,
+      "reward": 0.0,
+      "done": false,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "feedback": "Follow-up visit proposed for day 8."
+    },
+    {
+      "action_type": "handle_safety_event",
+      "criterion_id": null,
+      "reward": 1.0,
+      "done": true,
+      "terminal_success": true,
+      "unsafe_action": false,
+      "feedback": "Workflow completed successfully: eligibility, amendment handling, follow-up scheduling, and safety response all matched the verifier."
+    }
+  ]
+}

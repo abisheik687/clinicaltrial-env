@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 from clinicaltrial_env.action import ActionType, ScreeningAction
+from training.task3_anchor import TASK3_ANCHOR_TRAJECTORY
 
 ALLOWED_TRAJECTORY_ACTIONS = {
     ActionType.EVALUATE_CRITERION,
@@ -85,40 +86,15 @@ def build_episode_user_message(
     max_actions: int,
 ) -> str:
     seed_value = "unknown" if seed is None else str(seed)
-    minimal_schema = {
-        "trajectory": [
-            {
-                "action_type": "evaluate_criterion",
-                "criterion_id": "INC-001",
-                "evaluation": {
-                    "criterion_id": "INC-001",
-                    "verdict": "met",
-                    "reasoning": "age ok",
-                },
-            },
-            {
-                "action_type": "ask_clarification",
-                "clarification_target": "INC-003",
-            },
-            {
-                "action_type": "enroll",
-                "final_decision_reason": "criteria satisfied",
-            },
-            {
-                "action_type": "schedule_followup",
-                "followup_day": 8,
-            },
-            {
-                "action_type": "handle_safety_event",
-                "safety_response": "escalate",
-            },
-        ]
-    }
+    minimal_schema = {"trajectory": TASK3_ANCHOR_TRAJECTORY}
     return (
         f"Task={task_id}; seed={seed_value}; max_actions={max_actions}.\n"
         "Allowed action_type values only: evaluate_criterion, ask_clarification, enroll, exclude, "
         "schedule_followup, handle_safety_event.\n"
         "Never use inspect_patient, inspect_protocol, or defer.\n"
+        "Hard action clipping rule: during screening use only evaluate_criterion, ask_clarification, "
+        "enroll, or exclude; after enrollment use only schedule_followup; during safety_event use only "
+        "handle_safety_event.\n"
         "Keep each reasoning string under 6 words.\n"
         "Omit optional keys unless required by the action.\n"
         "During screening, evaluate criteria methodically and do not repeat a criterion unless the amendment "

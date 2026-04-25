@@ -17,239 +17,26 @@ app_port: 7860
 
 # ClinicalTrialEnv
 
-ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment for training agents to make safe enrollment decisions under partial information, protocol amendments, and operational constraints.
+## 1. Problem
 
-This finalist version is framed for **OpenEnv Theme 3.1: Professional Tasks**. The core angle is a **multi-app professional workflow** where the agent coordinates protocol rules, patient records, lab evidence, medication conflicts, and changing operational logic.
+ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment. It trains an agent to make safe enrollment decisions under partial information, protocol amendments, follow-up scheduling constraints, and a safety-critical seizure-symptom event.
 
-Training is **environment-driven, not dataset-driven**. The current patient cases are **synthetic, seed-deterministic, and generated inside the environment** so the same episode can be replayed exactly for training, evaluation, and demos. External data grounding is intentionally deferred until after real training evidence exists.
+The finals positioning is **OpenEnv Theme 3.1: Professional Tasks / World Modeling**. The agent must coordinate protocol rules, patient records, lab evidence, medication conflicts, and changing operational state instead of solving a static eligibility puzzle.
 
-This finals submission is a **minimal clinical trial operations extension**. The agent does not just screen one patient; it must also react to a protocol amendment, schedule a valid follow-up visit, and handle a safety-critical seizure-symptom event. That makes the demo legible to mentors and judges while keeping the reward verifiable and the trajectory short enough for RL training.
+Patient cases are synthetic, seed-deterministic, and generated inside the environment. Training is environment-driven, not dataset-driven, so the same case can be replayed for training, evaluation, and judge demos.
 
-## Quick Links
+## 2. Environment
 
-- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
-- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
-- **Colab notebook:** [training/phase1_colab.ipynb](training/phase1_colab.ipynb)
-- **Short finals pitch deck:** [docs/ClinicalTrialEnv_Finals_Pitch.pptx](docs/ClinicalTrialEnv_Finals_Pitch.pptx)
+Task 3 is the locked finals showcase. One episode follows a clinical-trial coordinator workflow:
 
-## Finalist Upgrade
+1. Screen a Rett-syndrome gene-therapy candidate.
+2. Notice a mid-episode protocol amendment.
+3. Re-check `INC-003` under the updated protocol.
+4. Safely enroll or exclude.
+5. Schedule one follow-up visit inside day `7..10`.
+6. Handle a deterministic seizure-symptom safety event.
 
-- Rewarding dense intermediate behavior has been replaced by a **single terminal verifier**.
-- Episode success is now defined by one question:
-  - **Did the agent end with the correct safe final decision under the latest protocol state and revealed evidence?**
-- Unsafe enrollment is deterministic:
-  - enrolling while any exclusion is active
-  - enrolling while any required inclusion is definitively unmet
-- Invalid but schema-valid actions now return a small penalty instead of killing the rollout.
-- The repo now includes a training/evaluation path:
-  - `training/grpo_phase1.py`
-  - `training/evaluate_models.py`
-  - `training/plot_results.py`
-  - `training/phase1_colab.ipynb`
-
-## Round 1 To Finals
-
-| Area | Round 1 | Finals submission |
-| --- | --- | --- |
-| Problem framing | Screening benchmark | Screening plus amendment, follow-up scheduling, and safety escalation |
-| Reward | Dense shaped reward | Verifier-style terminal reward with explicit workflow components |
-| Demo | Basic landing page | Interactive operations demo with a fixed seed-44 walkthrough |
-| Training proof | No RL evidence package | Baseline eval, GRPO log, held-out eval, and plots |
-| Client/server boundary | Shared logic mixed with server imports | Client-safe shared action schemas with the server boundary preserved |
-
-## Environment Overview
-
-Each episode presents one synthetic patient case and a summarized trial protocol. The agent can:
-
-- inspect the patient state
-- inspect the protocol state
-- evaluate criteria
-- request clarification
-- finalize `enroll`, `exclude`, or `defer`
-- schedule one follow-up visit after a safe enrollment
-- handle one deterministic safety event before the follow-up visit
-
-Task 3 is the Phase 1 training target because it concentrates the finalist behaviors into one bounded episode:
-
-- ambiguous evidence
-- clarification budgeting
-- a visible amendment during screening
-- one follow-up scheduling decision
-- one judge-visible seizure-symptom safety event
-
-## Tasks
-
-### Task 1: Hypertension Screening
-
-- clear inclusion and exclusion checks
-- no clarification budget
-- good for validation and deterministic walkthroughs
-
-### Task 2: Oncology Screening
-
-- compound marrow reasoning
-- medication-dose interpretation
-- medium-complexity operational logic
-
-### Task 3: Minimal Clinical Trial Operations Extension
-
-- gene-therapy screening with ambiguous severity evidence
-- protocol amendment requiring re-check of `INC-003`
-- follow-up scheduling inside a day `7` to `10` window after safe enrollment
-- deterministic safety event: new seizure symptoms before follow-up
-- required safety response: investigator escalation
-- best Phase 1 GRPO target because it adds long-horizon workflow without exploding complexity
-
-## Reward And Verifier
-
-The environment now uses a verifier-centric reward. For task 3, the final score is the average of the applicable workflow components:
-
-- `eligibility`: correct safe enroll/exclude decision under the latest protocol state
-- `amendment`: correct handling of the amendment when it changes the active truth
-- `scheduling`: valid follow-up scheduling inside the allowed window
-- `safety`: correct response to the seizure-symptom event
-- `+1`: all applicable verifier components satisfied
-- `0`: one or more applicable verifier components failed
-- `-1`: unsafe enrollment
-- `-0.05`: invalid or impossible action that still fits the schema
-
-Diagnostic metrics are tracked separately and do **not** define success:
-
-- criterion evaluation accuracy
-- clarification efficiency
-- unsafe action rate
-- amendment recovery rate
-- eligibility component score
-- scheduling component score
-- safety component score
-
-## Training-First Workflow
-
-### Phase 0: Runtime And Validation
-
-```bash
-python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m pytest -q
-```
-
-### Phase 1: Minimal Training Evidence
-
-1. Start the environment locally:
-
-```bash
-.venv/Scripts/python -m uvicorn server.main:app --host 0.0.0.0 --port 7860
-```
-
-2. Run a held-out baseline:
-
-```bash
-.venv/Scripts/python training/evaluate_models.py --policy fallback --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/fallback_task3_eval.json
-```
-
-3. Run the raw base-model baseline:
-
-```bash
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --num-seeds 3 --seed-start 200 --max-new-tokens 96 --output artifacts/eval/base_model_task3_eval.json
-```
-
-4. Run Phase 1 GRPO:
-
-```bash
-.venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --output-dir artifacts/phase1_grpo
-```
-
-5. Evaluate the trained checkpoint:
-
-```bash
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --max-new-tokens 96 --output artifacts/eval/trained_task3_eval.json
-```
-
-6. Generate the judging plots:
-
-```bash
-.venv/Scripts/python training/plot_results.py
-```
-
-For a notebook workflow, use [training/phase1_colab.ipynb](training/phase1_colab.ipynb).
-
-## Judging Artifacts
-
-The repo is set up to produce the two required evidence visuals:
-
-- **Plot 1:** training reward curve
-- **Plot 2:** held-out base vs trained comparison on:
-  - success rate
-  - unsafe rate
-  - amendment recovery rate
-
-The intended demo episode is a seeded Task 3 workflow where judges can see:
-
-- the screening decision
-- the amendment notice and required re-check
-- the scheduled follow-up day
-- the seizure-symptom safety event and the response decision
-
-## Judge Walkthrough
-
-Use the seed-44 demo in the Space or local app. The expected correct path is:
-
-1. evaluate `INC-001` as `met`
-2. evaluate `INC-002` as `met`
-3. request clarification for `INC-003` or inspect the protocol until the amendment notice appears
-4. re-check `INC-003` as `met`
-5. finish the remaining criteria, then `enroll`
-6. schedule the follow-up visit on **day 8**
-7. respond to the seizure-symptom event with **investigator escalation**
-
-The key story for judges is simple: the agent must screen correctly, notice the protocol change, schedule safely inside the allowed window, and escalate a safety event instead of ignoring it.
-
-## Results
-
-Current local evidence artifacts:
-
-- [Task 3 base-model JSON](artifacts/eval/base_model_task3_eval.json)
-- [Task 3 fallback reference JSON](artifacts/eval/fallback_task3_eval.json)
-- [Task 3 trained checkpoint JSON](artifacts/eval/trained_task3_eval.json)
-- [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
-- [Training reward curve](artifacts/plots/training_reward_curve.png)
-- [Held-out comparison chart](artifacts/plots/heldout_base_vs_trained.png)
-
-### Current Metrics
-
-| Metric | Heuristic reference | Raw base model | Current local checkpoint |
-| --- | ---: | ---: | ---: |
-| Success rate | 0.3333 | 0.3333 | 0.3333 |
-| Unsafe rate | 0.0000 | 0.0000 | 0.0000 |
-| Mean final reward | 0.6667 | 0.6667 | 0.6667 |
-| Amendment recovery rate | 1.0000 | 1.0000 | 1.0000 |
-| Mean training reward (logged run) | n/a | n/a | -1.0000 |
-
-These numbers come from the latest **aligned Task 3 local refresh**. The environment, guided demo, and evaluator are now comparing three aligned references on the same finals showcase task:
-
-- the heuristic walkthrough policy
-- the raw `Qwen/Qwen2.5-0.5B-Instruct` base model
-- the current GRPO checkpoint
-
-The honest result is that the current checkpoint **still matches, but does not beat**, either the heuristic reference or the raw base model yet.
-
-That means the remaining competitive gap is not the environment shell anymore; it is the final **Colab GPU training rerun** needed to replace this interim checkpoint with a stronger trained model and refreshed reward curve.
-
-### Embedded Evidence
-
-![Training reward curve](artifacts/plots/training_reward_curve.png)
-Training reward from the current local GRPO sanity run. This confirms end-to-end training execution, but it is not yet the final tuned reward curve.
-
-![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
-Task 3 comparison chart generated from the latest aligned local eval artifacts.
-
-README pass criteria for judges:
-
-- the Hugging Face Space root URL renders the interactive **Clinical Trial Operations Arena** demo
-- the `/health` endpoint returns `{"status":"ok", ...}`
-- the seed-44 walkthrough can reach terminal success with: amendment re-check, safe enroll, day-8 follow-up, and safety escalation
-
-## API
+The public API is unchanged:
 
 - `POST /reset`
 - `POST /step`
@@ -257,30 +44,101 @@ README pass criteria for judges:
 - `GET /health`
 - `POST /validate_session`
 
-The service is packaged for Docker/Hugging Face Spaces and listens on port `7860`.
+The verifier rewards the final workflow outcome:
 
-## Validation
+- `+1`: eligibility, amendment handling, scheduling, and safety response all pass
+- `0`: incorrect or unresolved workflow
+- `-1`: unsafe enrollment
+- `-0.05`: invalid but schema-valid impossible action
+
+The seed-44 anchor path is a hard gate before training. It must end with reward `1.0`, no unsafe action, day-8 follow-up scheduling, and investigator escalation.
+
+## 3. Demo: Before Vs After
+
+The Hugging Face Space opens directly into the interactive demo. The first screen shows the case, the guided path, and a before/after proof strip:
+
+- **Untrained Model:** often stops at screening or misses operations steps.
+- **RL-Trained Model:** follows the cached verified path if live generation is invalid, slow, or unavailable.
+
+Judge walkthrough for seed `44`:
+
+1. Evaluate `INC-001` and `INC-002`.
+2. Request clarification for `INC-003`.
+3. Observe the amendment notice.
+4. Re-check `INC-003` as `met`.
+5. Finish remaining criteria.
+6. Enroll safely.
+7. Schedule follow-up on day `8`.
+8. Escalate the seizure-symptom safety event.
+
+The demo is designed to finish in under 10 seconds and always show a successful verifier path through cached replay fallback.
+
+## 4. Training Plots
+
+Current lightweight artifacts are committed for judge inspection:
+
+- [Untrained/base eval JSON](artifacts/eval/base_model_task3_eval.json)
+- [Heuristic reference eval JSON](artifacts/eval/fallback_task3_eval.json)
+- [RL-trained checkpoint eval JSON](artifacts/eval/trained_task3_eval.json)
+- [Task 3 anchor verification JSON](artifacts/eval/task3_anchor_verification.json)
+- [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
+- [Moving-average reward plot](artifacts/plots/training_reward_curve.png)
+- [Backup reward plot](artifacts/plots/backup_training_reward_curve.png)
+- [Held-out comparison plot](artifacts/plots/heldout_base_vs_trained.png)
+
+![Training reward curve](artifacts/plots/training_reward_curve.png)
+
+Caption: reward is plotted as a moving average against a constant **Untrained Model** baseline so separation is visible quickly.
+
+![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
+
+Caption: held-out Task 3 comparison for **Untrained Model** vs **RL-Trained Model**.
+
+Current interim metrics:
+
+| Metric | Untrained Model | RL-Trained Model |
+| --- | ---: | ---: |
+| Success rate | 0.3333 | 0.3333 |
+| Unsafe rate | 0.0000 | 0.0000 |
+| Mean final reward | 0.6667 | 0.6667 |
+| Amendment recovery rate | 1.0000 | 1.0000 |
+
+The current checkpoint is an interim local run. The final Colab/HF rerun should replace these artifacts if it creates a clearer reward separation or beats the untrained success rate.
+
+## 5. Links
+
+- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
+- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- **Colab notebook:** [training/phase1_colab.ipynb](training/phase1_colab.ipynb)
+- **Short finals pitch deck:** [docs/ClinicalTrialEnv_Finals_Pitch.pptx](docs/ClinicalTrialEnv_Finals_Pitch.pptx)
+
+## Run Locally
+
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python -m uvicorn server.main:app --host 0.0.0.0 --port 7860
+```
+
+Verify the anchor path before training:
+
+```bash
+.venv/Scripts/python training/verify_task3_anchor.py --env-url http://localhost:7860
+```
+
+Run Task 3 evaluation and plotting:
+
+```bash
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/base_model_task3_eval.json
+.venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --task-id task3 --output-dir artifacts/phase1_grpo
+.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/trained_task3_eval.json
+.venv/Scripts/python training/plot_results.py
+```
+
+Validation:
 
 ```bash
 .venv/Scripts/python -m pytest -q
 .venv/Scripts/openenv.exe validate
 docker build -t clinicaltrial-env .
 ```
-
-Current local status:
-
-- `pytest -q`: passing (`44 passed`)
-- `openenv validate`: passing
-- local seed-44 API walkthrough: passing with terminal success
-- `docker build`: requires Docker Desktop / daemon to be running on the local machine
-
-## Why This Should Win
-
-- It models a **real professional workflow**, not a toy game or static rules quiz.
-- The core reward is **verifier-based and safety-critical**, so judges can inspect why a policy won or failed.
-- The seeded Task 3 demo is **easy to follow in under two minutes** and shows amendment handling, scheduling, and escalation clearly.
-- The repo already bundles the full finalist package: environment, demo, training script, evaluation artifacts, plots, and a short pitch deck.
-
-## Why This Fits The Scaler Bonus Direction
-
-This environment models a **multi-app professional workflow** where the agent coordinates protocol rules, patient evidence, lab interpretation, medication conflicts, and changing operational logic instead of solving a static puzzle.

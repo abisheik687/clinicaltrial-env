@@ -11,6 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt .
 RUN python -m pip install --retries 10 --timeout 100 -r requirements.txt
 
+COPY clinicaltrial_env/ ./clinicaltrial_env/
 COPY server/ ./server/
 COPY protocols/ ./protocols/
 COPY openenv.yaml .
