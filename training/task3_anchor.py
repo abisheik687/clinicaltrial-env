@@ -91,8 +91,57 @@ TASK3_ANCHOR_TRAJECTORY: list[dict[str, Any]] = [
 ]
 
 
+TASK3_COMPACT_TRAJECTORY: list[dict[str, Any]] = [
+    {
+        "action_type": "evaluate_criterion",
+        "criterion_id": "INC-001",
+        "evaluation": {"criterion_id": "INC-001", "verdict": "met", "reasoning": "age ok"},
+        "confidence_score": 0.9,
+    },
+    {
+        "action_type": "evaluate_criterion",
+        "criterion_id": "INC-002",
+        "evaluation": {"criterion_id": "INC-002", "verdict": "met", "reasoning": "mutation ok"},
+        "confidence_score": 0.9,
+    },
+    {
+        "action_type": "ask_clarification",
+        "clarification_target": "INC-003",
+        "confidence_score": 0.8,
+    },
+    {
+        "action_type": "evaluate_criterion",
+        "criterion_id": "INC-003",
+        "evaluation": {"criterion_id": "INC-003", "verdict": "met", "reasoning": "css ok"},
+        "confidence_score": 0.9,
+    },
+    {
+        "action_type": "enroll",
+        "final_decision_reason": "Criteria pass.",
+        "confidence_score": 0.9,
+    },
+    {
+        "action_type": "schedule_followup",
+        "followup_day": 8,
+        "confidence_score": 0.8,
+    },
+    {
+        "action_type": "handle_safety_event",
+        "safety_response": "escalate",
+        "confidence_score": 0.9,
+    },
+]
+
+
 def task3_anchor_completion() -> str:
     """Return the compact JSON completion used as the warm-start anchor."""
     import json
 
     return json.dumps({"trajectory": TASK3_ANCHOR_TRAJECTORY}, separators=(",", ":"))
+
+
+def task3_compact_completion() -> str:
+    """Return a compact JSON completion that fits in ~200 tokens for warmstart."""
+    import json
+
+    return json.dumps({"trajectory": TASK3_COMPACT_TRAJECTORY}, separators=(",", ":"))

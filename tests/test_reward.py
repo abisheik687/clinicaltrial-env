@@ -180,7 +180,8 @@ def test_task3_safe_enrollment_requires_followup_and_safety_resolution() -> None
     )
 
     assert done_after_schedule is False
-    assert schedule_reward.total_reward == 0.0
+    # SCHEDULE_FOLLOWUP awards +0.3 intermediate shaping bonus when ENABLE_INTERMEDIATE_SHAPING=1 (default)
+    assert schedule_reward.total_reward == 0.3
     assert env.sessions[session_id].workflow_phase == "safety_event"
 
     _, safety_reward, done_final, _ = env.step(

@@ -81,6 +81,9 @@ Current lightweight artifacts are committed for judge inspection:
 - [Heuristic reference eval JSON](artifacts/eval/fallback_task3_eval.json)
 - [RL-trained checkpoint eval JSON](artifacts/eval/trained_task3_eval.json)
 - [Task 3 anchor verification JSON](artifacts/eval/task3_anchor_verification.json)
+- [Training validation summary](artifacts/eval/training_validation_summary.json)
+- [Before/after trajectory trace](artifacts/eval/before_after_trajectories.json)
+- [Judge-facing training report](TRAINING_REPORT.md)
 - [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
 - [Moving-average reward plot](artifacts/plots/training_reward_curve.png)
 - [Backup reward plot](artifacts/plots/backup_training_reward_curve.png)
@@ -104,6 +107,8 @@ Current interim metrics:
 | Amendment recovery rate | 1.0000 | 1.0000 |
 
 The current checkpoint is an interim local run. The final Colab/HF rerun should replace these artifacts if it creates a clearer reward separation or beats the untrained success rate.
+
+The final HF training job is intentionally gated: it starts the FastAPI environment, waits for `/health == ok`, verifies the seed-44 anchor trajectory, runs a 100-step signal pass, validates trajectory-level reward variance/done rate/JSON validity/clipping/fallback usage/behavior divergence, and only then runs the longer pass.
 
 ## 5. Links
 
@@ -134,6 +139,15 @@ Run Task 3 evaluation and plotting:
 .venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/trained_task3_eval.json
 .venv/Scripts/python training/plot_results.py
 ```
+
+Run the staged HF Jobs training flow after authenticating with Hugging Face:
+
+```powershell
+hf auth login
+.\training\launch_hf_training_job.ps1
+```
+
+The HF job entrypoint is [training/hf_job_entrypoint.py](training/hf_job_entrypoint.py). It refuses to claim improvement if success, reward, and behavior are unchanged.
 
 Validation:
 

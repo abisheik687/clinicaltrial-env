@@ -26,17 +26,23 @@ def replay_anchor(env_url: str) -> dict[str, Any]:
         session_id = reset_payload["session_id"]
         steps: list[dict[str, Any]] = []
         final_payload: dict[str, Any] | None = None
+        violation_count = 0
 
         for action in TASK3_ANCHOR_TRAJECTORY:
             step_response = client.post("/step", json={"session_id": session_id, "action": action})
             step_response.raise_for_status()
             final_payload = step_response.json()
+            info = final_payload.get("info", {})
+            invalid_action = bool(info.get("invalid_action", False))
+            if invalid_action:
+                violation_count += 1
             steps.append(
                 {
                     "action_type": action["action_type"],
                     "criterion_id": action.get("criterion_id"),
                     "reward": final_payload["reward"]["total_reward"],
                     "done": final_payload["done"],
+                    "invalid_action": invalid_action,
                     "terminal_success": final_payload["reward"]["terminal_success"],
                     "unsafe_action": final_payload["reward"]["unsafe_action"],
                     "feedback": final_payload["reward"]["verifier_feedback"],
@@ -50,10 +56,13 @@ def replay_anchor(env_url: str) -> dict[str, Any]:
 
     reward = final_payload["reward"]
     diagnostics = reward.get("diagnostic_metrics", {})
+    # A violation is any invalid action or unsafe terminal action.
+    violations = violation_count + (1 if bool(reward["unsafe_action"]) else 0)
     passed = (
         bool(final_payload["done"])
         and bool(reward["terminal_success"])
         and not bool(reward["unsafe_action"])
+        and violations == 0
         and float(reward["total_reward"]) == TASK3_MAX_REWARD
         and diagnostics.get("eligibility_component_score") == 1.0
         and diagnostics.get("amendment_component_score") == 1.0
@@ -64,6 +73,7 @@ def replay_anchor(env_url: str) -> dict[str, Any]:
         "passed": passed,
         "seed": TASK3_ANCHOR_SEED,
         "max_reward": TASK3_MAX_REWARD,
+        "violations": violations,
         "final_reward": reward,
         "steps": steps,
     }

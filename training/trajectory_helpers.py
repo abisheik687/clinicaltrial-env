@@ -7,7 +7,7 @@ import json
 from typing import Any
 
 from clinicaltrial_env.action import ActionType, ScreeningAction
-from training.task3_anchor import TASK3_ANCHOR_TRAJECTORY
+from training.task3_anchor import TASK3_COMPACT_TRAJECTORY
 
 ALLOWED_TRAJECTORY_ACTIONS = {
     ActionType.EVALUATE_CRITERION,
@@ -84,9 +84,18 @@ def build_episode_user_message(
     task_id: str,
     seed: int | None,
     max_actions: int,
+    local_debug_mode: bool = False,
 ) -> str:
     seed_value = "unknown" if seed is None else str(seed)
-    minimal_schema = {"trajectory": TASK3_ANCHOR_TRAJECTORY}
+    minimal_schema = {"trajectory": TASK3_COMPACT_TRAJECTORY}
+    debug_constraints = ""
+    if local_debug_mode:
+        debug_constraints = (
+            "\nLocal debug mode enabled: reduce task difficulty.\n"
+            "During screening, prioritize evaluate_criterion and ask_clarification; "
+            "emit enroll/exclude only after eligibility evidence is complete.\n"
+            "Do not emit defer in local debug mode."
+        )
     return (
         f"Task={task_id}; seed={seed_value}; max_actions={max_actions}.\n"
         "Allowed action_type values only: evaluate_criterion, ask_clarification, enroll, exclude, "
@@ -102,6 +111,7 @@ def build_episode_user_message(
         "Only ask for clarification when a target is clarifiable and evidence is pending or estimated.\n"
         "After a safe enroll, schedule the follow-up inside the visible window. Prefer day 8 when valid.\n"
         "When the seizure-symptom safety event becomes active, respond with investigator escalation.\n"
+        f"{debug_constraints}\n"
         "Output schema example:\n"
         f"{json.dumps(minimal_schema, separators=(',', ':'))}\n"
         "Episode observation:\n"
@@ -115,9 +125,10 @@ def build_episode_prompt(
     seed: int | None,
     max_actions: int,
     tokenizer: Any | None = None,
+    local_debug_mode: bool = False,
 ) -> str:
     system_prompt = build_episode_system_prompt()
-    user_prompt = build_episode_user_message(observation, task_id, seed, max_actions)
+    user_prompt = build_episode_user_message(observation, task_id, seed, max_actions, local_debug_mode=local_debug_mode)
     if tokenizer is not None and hasattr(tokenizer, "apply_chat_template"):
         return tokenizer.apply_chat_template(
             [
@@ -140,7 +151,44 @@ def extract_json_block(text: str) -> str:
             return text[index : index + end]
         except json.JSONDecodeError:
             continue
+    # Try to repair truncated JSON by closing brackets
+    repaired = _repair_truncated_json(text)
+    if repaired is not None:
+        return repaired
     raise ValueError("No valid JSON object found in model completion.")
+
+
+def _repair_truncated_json(text: str) -> str | None:
+    """Attempt to close truncated JSON so partial trajectories can be recovered."""
+    # Find the start of the JSON
+    start = -1
+    for i, c in enumerate(text):
+        if c in "{[":
+            start = i
+            break
+    if start < 0:
+        return None
+    fragment = text[start:]
+    # Try progressively adding closing brackets
+    for suffix in ["]}", "]", "}", "}]}", "]}"]:
+        candidate = fragment + suffix
+        try:
+            json.loads(candidate)
+            return candidate
+        except json.JSONDecodeError:
+            continue
+    # Try truncating the last partial element before closing
+    last_comma = fragment.rfind(",")
+    if last_comma > 0:
+        trimmed = fragment[:last_comma]
+        for suffix in ["]}", "]", "}"]:
+            candidate = trimmed + suffix
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                continue
+    return None
 
 
 def normalize_completion_text(completion: Any) -> str:
@@ -172,8 +220,13 @@ def parse_trajectory_completion(completion_text: str, max_actions: int) -> list[
 
     validated: list[dict[str, Any]] = []
     for action in trajectory[:max_actions]:
-        validated_action = ScreeningAction.model_validate(action)
-        if validated_action.action_type not in ALLOWED_TRAJECTORY_ACTIONS:
-            raise ValueError(f"Unsupported trajectory action_type: {validated_action.action_type.value}")
-        validated.append(validated_action.model_dump(exclude_none=True))
+        try:
+            validated_action = ScreeningAction.model_validate(action)
+            if validated_action.action_type not in ALLOWED_TRAJECTORY_ACTIONS:
+                continue  # skip unsupported but keep going
+            validated.append(validated_action.model_dump(exclude_none=True))
+        except Exception:
+            continue  # skip malformed individual actions, keep valid ones
+    if not validated:
+        raise ValueError("No valid actions found in trajectory.")
     return validated

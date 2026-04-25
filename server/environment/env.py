@@ -73,6 +73,7 @@ class ClinicalTrialEnv:
         state = self._get_session(session_id)
         if state.done:
             raise HTTPException(status_code=400, detail="Episode already done")
+        valid_action_types = self.get_valid_action_types(state)
         hidden = state.__dict__["hidden_case"]
         if state.task_id == "task3" and state.workflow_phase == "screening":
             pre_action_notice = self.state_machine.maybe_inject_amendment(state)
@@ -84,6 +85,7 @@ class ClinicalTrialEnv:
             amendment_notice = self.state_machine.maybe_inject_amendment(state)
             info.update(pre_action_notice)
             info.update(amendment_notice)
+            info["valid_action_types"] = valid_action_types
             reward = self.reward_calculator.compute_invalid(state, invalid_reason)
             state.cumulative_reward = round(state.cumulative_reward + reward.total_reward, 4)
             self.episode_manager.touch(session_id)
@@ -125,6 +127,7 @@ class ClinicalTrialEnv:
         amendment_notice = self.state_machine.maybe_inject_amendment(state)
         info.update(pre_action_notice)
         info.update(amendment_notice)
+        info["valid_action_types"] = valid_action_types
         reward = self.reward_calculator.compute(state, action, info)
         state.cumulative_reward = round(state.cumulative_reward + reward.total_reward, 4)
         self.episode_manager.touch(session_id)
@@ -185,3 +188,37 @@ class ClinicalTrialEnv:
                     if not (ops.followup_window_start <= action.reschedule_day <= ops.followup_window_end):
                         return f"Rescheduled follow-up day must stay within the allowed window of day {ops.followup_window_start} to {ops.followup_window_end}."
         return None
+
+    def get_valid_action_types(self, state: TrialState) -> list[str]:
+        """Return action types expected to be valid for the current state."""
+        valid: list[ActionType] = []
+        if state.task_id != "task3":
+            valid.extend(
+                [
+                    ActionType.EVALUATE_CRITERION,
+                    ActionType.ASK_CLARIFICATION,
+                    ActionType.ENROLL,
+                    ActionType.EXCLUDE,
+                    ActionType.DEFER,
+                ]
+            )
+            if state.clarifications_used >= state.clarification_budget:
+                valid = [item for item in valid if item != ActionType.ASK_CLARIFICATION]
+            if not state.evaluated_criteria:
+                valid = [item for item in valid if item not in {ActionType.ENROLL, ActionType.EXCLUDE, ActionType.DEFER}]
+            return [item.value for item in valid]
+
+        if state.workflow_phase == "screening":
+            valid.extend(
+                [
+                    ActionType.EVALUATE_CRITERION,
+                    ActionType.ASK_CLARIFICATION,
+                ]
+            )
+            if state.evaluated_criteria and state.amendment_injected:
+                valid.extend([ActionType.ENROLL, ActionType.EXCLUDE, ActionType.DEFER])
+        elif state.workflow_phase == "followup_scheduling":
+            valid.append(ActionType.SCHEDULE_FOLLOWUP)
+        elif state.workflow_phase == "safety_event" and state.safety_event_active:
+            valid.append(ActionType.HANDLE_SAFETY_EVENT)
+        return [item.value for item in valid]

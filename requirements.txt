@@ -11,3 +11,4 @@ openai>=2.7.2
 openenv>=0.1.13,<0.2
 pytest==8.3.3
 pytest-asyncio==0.24.0
+hypothesis>=6,<7

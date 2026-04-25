@@ -1,5 +1,7 @@
 """Verifier-centric rewards and diagnostic metrics."""
 
+import os
+
 from server.models.action import ActionType, ScreeningAction
 from server.models.reward import EnrollmentReward
 
@@ -8,6 +10,7 @@ class RewardCalculator:
     """Compute terminal rewards plus diagnostic metrics."""
 
     INVALID_ACTION_PENALTY = -0.05
+    INTERMEDIATE_SHAPING_BONUS = 0.3
 
     def __init__(self) -> None:
         pass
@@ -76,6 +79,15 @@ class RewardCalculator:
             reward = sum(component_values) / len(component_values) if component_values else 0.0
             terminal_success = bool(component_values) and all(value == 1.0 for value in component_values)
             feedback = self._task3_terminal_feedback(action, diagnostics, terminal_success)
+        elif os.environ.get("ENABLE_INTERMEDIATE_SHAPING", "1") == "1":
+            hidden = state.__dict__.setdefault("hidden_case", {})
+            if action.action_type == ActionType.EVALUATE_CRITERION and action.criterion_id == "INC-003":
+                if hidden.get("amendment_detected") and not hidden.get("shaping_bonus_amendment", False):
+                    reward += self.INTERMEDIATE_SHAPING_BONUS
+                    hidden["shaping_bonus_amendment"] = True
+            if action.action_type == ActionType.SCHEDULE_FOLLOWUP and not hidden.get("shaping_bonus_followup", False):
+                reward += self.INTERMEDIATE_SHAPING_BONUS
+                hidden["shaping_bonus_followup"] = True
 
         return EnrollmentReward(
             total_reward=round(reward, 4),

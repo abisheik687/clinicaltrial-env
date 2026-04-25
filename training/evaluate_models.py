@@ -29,7 +29,7 @@ class FallbackOnlyClient:
 class LocalModelClient:
     """Evaluate local checkpoints with the same full-trajectory format used in GRPO."""
 
-    def __init__(self, model_name: str, max_new_tokens: int = 256) -> None:
+    def __init__(self, model_name: str, max_new_tokens: int = 384) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -62,29 +62,34 @@ class LocalModelClient:
         del reward, history
         patient_id = observation["patient_id"]
         try:
-            if patient_id in self.plan_failures:
-                return inference.build_fallback_action(observation, task_id, action_records)
-            if patient_id not in self.planned_trajectories or not action_records:
-                self._cache_plan(
-                    patient_id=patient_id,
-                    observation=observation,
-                    task_id=task_id,
-                    max_actions=min(max(observation.get("steps_remaining", 1), 1), 10),
-                )
-            planned_actions = self.planned_trajectories.get(patient_id, [])
-            plan_index = self.plan_indices.get(patient_id, 0)
-            if plan_index < len(planned_actions):
-                planned_action = planned_actions[plan_index]
-                self.plan_indices[patient_id] = plan_index + 1
-                return inference.stabilize_action(
-                    planned_action,
-                    observation,
-                    task_id,
-                    action_records,
-                )
+            if patient_id not in self.plan_failures:
+                if patient_id not in self.planned_trajectories or not action_records:
+                    self._cache_plan(
+                        patient_id=patient_id,
+                        observation=observation,
+                        task_id=task_id,
+                        max_actions=min(max(observation.get("steps_remaining", 1), 1), 14),
+                    )
+                planned_actions = self.planned_trajectories.get(patient_id, [])
+                plan_index = self.plan_indices.get(patient_id, 0)
+                if plan_index < len(planned_actions):
+                    planned_action = planned_actions[plan_index]
+                    self.plan_indices[patient_id] = plan_index + 1
+                    return inference.stabilize_action(
+                        planned_action,
+                        observation,
+                        task_id,
+                        action_records,
+                    )
         except Exception:
             self.plan_failures.add(patient_id)
-        return inference.build_fallback_action(observation, task_id, action_records)
+        # No fallback heuristic — return a low-confidence exclude so
+        # evaluation reflects real model capability differences.
+        return {
+            "action_type": "exclude",
+            "confidence_score": 0.1,
+            "final_decision_reason": "Model could not generate a valid plan.",
+        }
 
     def _cache_plan(
         self,
@@ -135,6 +140,7 @@ async def run_episode(
     action_records: list[dict[str, Any]] = []
     rewards: list[float] = []
     done = False
+    fallback_used = False
     last_reward = 0.0
     final_reward_payload: dict[str, Any] = {}
 
@@ -166,8 +172,12 @@ async def run_episode(
 
         response = await env_client.post("/step", json={"session_id": session_id, "action": action}, timeout=30.0)
         if response.status_code >= 400:
-            action = inference.build_fallback_action(observation, task_id, action_records)
-            response = await env_client.post("/step", json={"session_id": session_id, "action": action}, timeout=30.0)
+            fallback_used = True
+            if isinstance(model_client, FallbackOnlyClient):
+                action = inference.build_fallback_action(observation, task_id, action_records)
+                response = await env_client.post("/step", json={"session_id": session_id, "action": action}, timeout=30.0)
+            else:
+                break
         response.raise_for_status()
         data = response.json()
         observation = data["observation"]
@@ -185,6 +195,8 @@ async def run_episode(
         "final_reward": rewards[-1] if rewards else 0.0,
         "terminal_success": bool(final_reward_payload.get("terminal_success", False)),
         "unsafe_action": bool(final_reward_payload.get("unsafe_action", False)),
+        "fallback_used": fallback_used
+        or (isinstance(model_client, LocalModelClient) and observation["patient_id"] in model_client.plan_failures),
         "diagnostic_metrics": final_reward_payload.get("diagnostic_metrics", {}),
         "trajectory": action_records,
     }
@@ -216,6 +228,7 @@ def aggregate(episodes: list[dict[str, Any]]) -> dict[str, float]:
     return {
         "success_rate": round(sum(1.0 for item in episodes if item["terminal_success"]) / count, 4),
         "unsafe_rate": round(sum(1.0 for item in episodes if item["unsafe_action"]) / count, 4),
+        "fallback_used_rate": round(sum(1.0 for item in episodes if item.get("fallback_used", False)) / count, 4),
         "mean_final_reward": round(sum(float(item["final_reward"]) for item in episodes) / count, 4),
         **aggregated,
     }
@@ -279,7 +292,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed-start", type=int, default=200)
     parser.add_argument("--num-seeds", type=int, default=5)
     parser.add_argument("--task-ids", default="task1,task2,task3")
-    parser.add_argument("--max-new-tokens", type=int, default=192)
+    parser.add_argument("--max-new-tokens", type=int, default=384)
     parser.add_argument("--output", default="artifacts/eval/baseline_eval.json")
     return parser.parse_args()
 

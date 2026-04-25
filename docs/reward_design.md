@@ -23,13 +23,17 @@ Unsafe enrollment is fully deterministic:
 
 No model-judged safety logic is used.
 
-## Minimal Shaping
+## Intermediate Shaping Bonuses
 
-The only shaping term retained for the initial GRPO phase is:
+The following shaping terms are active when `ENABLE_INTERMEDIATE_SHAPING=1` (the default set by `grpo_phase1.py`):
 
+- `+0.3`: awarded once per episode when `EVALUATE_CRITERION` for `INC-003` is called after `amendment_detected=True` in hidden state (guarded by `shaping_bonus_amendment`)
+- `+0.3`: awarded once per episode when `SCHEDULE_FOLLOWUP` is called (guarded by `shaping_bonus_followup`)
 - `-0.05`: invalid or impossible action that still fits the schema
 
-Examples:
+The two `+0.3` bonuses each fire at most once per episode. They reward the agent for recognising the amendment and for scheduling appropriate follow-up — two behaviours that are necessary for a correct safe final decision but are otherwise invisible to the terminal reward signal.
+
+Examples of the `-0.05` penalty:
 
 - trying to finalize before evaluating any criterion
 - requesting clarification after the budget is exhausted

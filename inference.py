@@ -72,7 +72,16 @@ def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> No
 
 
 def build_system_prompt() -> str:
-    return """You are a clinical trial coordinator AI assistant operating inside a clinical trial workflow environment.
+    local_debug_mode = os.environ.get("LOCAL_SIGNAL_DEBUG", "0") == "1"
+    debug_rules = ""
+    if local_debug_mode:
+        debug_rules = """
+- Local debug mode: reduce difficulty.
+- During screening, prioritize evaluate_criterion and ask_clarification.
+- Use enroll/exclude only after sufficient eligibility evidence.
+- Never use defer in local debug mode.
+"""
+    return f"""You are a clinical trial coordinator AI assistant operating inside a clinical trial workflow environment.
 
 Return exactly one JSON object using this schema:
 {
@@ -97,6 +106,8 @@ Rules:
 - Re-check INC-003 if an amendment activates in task 3.
 - After a safe enroll in task 3, schedule a follow-up visit inside the allowed window.
 - If a seizure-symptom safety event becomes active, respond with a valid handle_safety_event action.
+- Respect workflow phases when choosing action types.
+{debug_rules}
 - Return one action only, never markdown or commentary."""
 
 
@@ -181,54 +192,8 @@ def stabilize_action(
     task_id: str,
     action_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    operational_state = observation.get("operational_state") or {}
-    if task_id == "task3":
-        workflow_phase = operational_state.get("workflow_phase")
-        if workflow_phase == "followup_scheduling":
-            if action.get("action_type") != "schedule_followup":
-                return build_fallback_action(observation, task_id, action_records)
-            day = action.get("followup_day")
-            window_start = operational_state.get("followup_window_start")
-            window_end = operational_state.get("followup_window_end")
-            if (
-                not isinstance(day, int)
-                or not isinstance(window_start, int)
-                or not isinstance(window_end, int)
-                or not (window_start <= day <= window_end)
-            ):
-                return build_fallback_action(observation, task_id, action_records)
-        if workflow_phase == "safety_event" and action.get("action_type") != "handle_safety_event":
-            return build_fallback_action(observation, task_id, action_records)
-
-    criteria = observation["trial_protocol_summary"]["inclusion_criteria"] + observation["trial_protocol_summary"]["exclusion_criteria"]
-    criteria_by_id = {criterion["criterion_id"]: criterion for criterion in criteria}
-    clarified_ids = {
-        record.get("clarification_target")
-        for record in action_records
-        if record.get("action_type") == "ask_clarification" and record.get("clarification_target")
-    }
-    evaluated_ids = {
-        record.get("criterion_id")
-        for record in action_records
-        if record.get("action_type") == "evaluate_criterion" and record.get("criterion_id")
-    }
-
-    if action.get("action_type") == "ask_clarification":
-        target = action.get("clarification_target")
-        criterion = criteria_by_id.get(target)
-        if target in clarified_ids or not criterion or not criterion.get("clarification_available", False):
-            return build_fallback_action(observation, task_id, action_records)
-
-    if action.get("action_type") == "evaluate_criterion":
-        criterion_id = action.get("criterion_id")
-        amendment_recheck = (
-            task_id == "task3"
-            and operational_state.get("amendment_review_required")
-            and criterion_id == "INC-003"
-        )
-        if criterion_id in evaluated_ids and not amendment_recheck:
-            return build_fallback_action(observation, task_id, action_records)
-
+    del observation, task_id, action_records
+    # Keep model action unchanged to expose invalid behavior to the environment reward.
     return action
 
 

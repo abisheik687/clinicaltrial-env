@@ -9,6 +9,7 @@ import os
 import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -21,21 +22,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-if os.name == "nt" and not sys.flags.utf8_mode:
+if __name__ == "__main__" and os.name == "nt" and not sys.flags.utf8_mode:
     rerun = subprocess.run(
         [sys.executable, "-X", "utf8", str(Path(__file__).resolve()), *sys.argv[1:]],
         check=False,
     )
     sys.exit(rerun.returncode)
 
-from trl import GRPOConfig, GRPOTrainer
-
-import inference
 from training.trajectory_helpers import (
     build_episode_prompt,
     normalize_completion_text,
     parse_trajectory_completion,
 )
+from training.task3_anchor import TASK3_ANCHOR_SEED, task3_anchor_completion, task3_compact_completion
 from training.verify_task3_anchor import replay_anchor
 
 
@@ -44,6 +43,24 @@ ACTIVE_DEFAULT_TASK_ID = "task3"
 ACTIVE_TIMEOUT = 60.0
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 INVALID_COMPLETION_REWARD = -1.0
+INVALID_TRAJECTORY_WEIGHT = 0.1
+
+
+def wait_for_server(url: str, max_wait_seconds: int = 120, poll_interval_seconds: int = 5) -> None:
+    """Poll GET {url}/ until the server responds or the deadline is exceeded."""
+    deadline = time.time() + max_wait_seconds
+    while time.time() < deadline:
+        try:
+            response = httpx.get(url + "/", timeout=5)
+            if response.status_code < 500:
+                return
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            pass
+        time.sleep(poll_interval_seconds)
+    raise RuntimeError(
+        f"Environment server not reachable at {url} after {max_wait_seconds}s. "
+        "Start the server (e.g. `docker-compose up`) before running training."
+    )
 
 
 def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_actions: int, tokenizer: Any | None = None) -> Dataset:
@@ -56,12 +73,21 @@ def build_prompt_dataset(task_id: str, seed_start: int, num_episodes: int, max_a
             response = client.post("/reset", json={"task_id": task_id, "seed": seed})
             response.raise_for_status()
             data = response.json()
-            prompts.append(build_episode_prompt(data["observation"], task_id, seed, max_actions, tokenizer=tokenizer))
+            prompts.append(
+                build_episode_prompt(
+                    data["observation"],
+                    task_id,
+                    seed,
+                    max_actions,
+                    tokenizer=tokenizer,
+                    local_debug_mode=os.environ.get("LOCAL_SIGNAL_DEBUG", "0") == "1",
+                )
+            )
             task_ids.append(task_id)
             seeds.append(seed)
     return Dataset.from_dict({"prompt": prompts, "task_id": task_ids, "seed": seeds})
 
-def replay_trajectory(task_id: str, seed: int, trajectory: list[dict[str, Any]]) -> tuple[float, dict[str, Any]]:
+def replay_trajectory(task_id: str, seed: int, trajectory: list[dict[str, Any]]) -> tuple[float, dict[str, Any], list[float]]:
     with httpx.Client(base_url=ACTIVE_ENV_URL, timeout=ACTIVE_TIMEOUT) as client:
         reset_response = client.post("/reset", json={"task_id": task_id, "seed": seed})
         reset_response.raise_for_status()
@@ -77,18 +103,25 @@ def replay_trajectory(task_id: str, seed: int, trajectory: list[dict[str, Any]])
         }
 
         for action in trajectory:
-            stabilized_action = inference.stabilize_action(action, observation, task_id, action_records)
-            step_response = client.post("/step", json={"session_id": session_id, "action": stabilized_action})
+            step_response = client.post("/step", json={"session_id": session_id, "action": action})
             step_response.raise_for_status()
             step_data = step_response.json()
             reward_trace.append(float(step_data["reward"]["total_reward"]))
             final_payload = step_data
             observation = step_data["observation"]
-            action_records.append(stabilized_action)
+            action_records.append(action)
             if step_data["done"]:
                 break
 
-    return round(sum(reward_trace), 4), final_payload
+    return round(sum(reward_trace), 4), final_payload, reward_trace
+
+
+def weighted_reward(raw_reward: float, final_payload: dict[str, Any]) -> tuple[float, float, bool]:
+    reward_payload = final_payload.get("reward", {}) if isinstance(final_payload, dict) else {}
+    info_payload = final_payload.get("info", {}) if isinstance(final_payload, dict) else {}
+    invalid_or_unsafe = bool(reward_payload.get("unsafe_action")) or bool(info_payload.get("invalid_action"))
+    weight = INVALID_TRAJECTORY_WEIGHT if invalid_or_unsafe else 1.0
+    return float(raw_reward) * weight, weight, invalid_or_unsafe
 
 
 def environment_reward(
@@ -101,16 +134,32 @@ def environment_reward(
 ) -> list[float]:
     del prompts, kwargs
     rewards: list[float] = []
+    invalid_or_unsafe_count = 0
+    weight_trace: list[float] = []
     for completion, sample_task_id, sample_seed in zip(completions, task_id, seed, strict=True):
         try:
             trajectory = parse_trajectory_completion(normalize_completion_text(completion), max_actions=12)
-            reward_value, _ = replay_trajectory(sample_task_id, int(sample_seed), trajectory)
+            reward_value, final_payload, _ = replay_trajectory(sample_task_id, int(sample_seed), trajectory)
+            reward_value, weight, invalid_or_unsafe = weighted_reward(reward_value, final_payload)
+            weight_trace.append(weight)
+            if invalid_or_unsafe:
+                invalid_or_unsafe_count += 1
         except Exception:
             reward_value = INVALID_COMPLETION_REWARD
         rewards.append(float(reward_value))
 
     if log_metric is not None and rewards:
-        log_metric("http_replay_reward_mean", statistics.fmean(rewards))
+        mean_reward = statistics.fmean(rewards)
+        reward_std = statistics.pstdev(rewards) if len(rewards) > 1 else 0.0
+        advantages = [reward - mean_reward for reward in rewards]
+        advantage_std = statistics.pstdev(advantages) if len(advantages) > 1 else 0.0
+        log_metric("http_replay_reward_mean", mean_reward)
+        log_metric("trajectory_final_reward_std", reward_std)
+        log_metric("advantage_mean", statistics.fmean(advantages) if advantages else 0.0)
+        log_metric("advantage_std", advantage_std)
+        if weight_trace:
+            log_metric("trajectory_weight_mean", statistics.fmean(weight_trace))
+            log_metric("trajectory_invalid_or_unsafe_rate", invalid_or_unsafe_count / len(weight_trace))
     return rewards
 
 
@@ -142,6 +191,7 @@ def collect_rollouts(
                 seed=int(seed_value),
                 max_actions=max_actions,
                 tokenizer=tokenizer,
+                local_debug_mode=os.environ.get("LOCAL_SIGNAL_DEBUG", "0") == "1",
             )
         inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {key: value.to(model.device) for key, value in inputs.items()}
@@ -155,19 +205,28 @@ def collect_rollouts(
         completion = tokenizer.decode(generated_tokens, skip_special_tokens=True)
         try:
             trajectory = parse_trajectory_completion(completion, max_actions=max_actions)
-            reward_value, final_payload = replay_trajectory(task_id, int(seed_value), trajectory)
+            reward_value, final_payload, reward_trace = replay_trajectory(task_id, int(seed_value), trajectory)
+            weighted_value, reward_weight, invalid_or_unsafe = weighted_reward(reward_value, final_payload)
         except Exception as exc:
             trajectory = []
             reward_value = INVALID_COMPLETION_REWARD
+            weighted_value = INVALID_COMPLETION_REWARD
+            reward_weight = 1.0
+            invalid_or_unsafe = False
+            reward_trace = []
             final_payload = {"error": str(exc)}
         rollouts.append(
             {
                 "prompt": prompt,
                 "completion": completion,
                 "reward": reward_value,
+                "weighted_reward": weighted_value,
+                "reward_weight": reward_weight,
+                "invalid_or_unsafe": invalid_or_unsafe,
                 "task_id": task_id,
                 "seed": int(seed_value),
                 "trajectory": trajectory,
+                "reward_trace": reward_trace,
                 "final_payload": final_payload,
             }
         )
@@ -207,7 +266,14 @@ def verify_anchor_gate(env_url: str, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "task3_anchor_verification.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     if not payload["passed"]:
-        raise RuntimeError("Task 3 anchor trajectory failed. Stop training and fix the environment/path first.")
+        final_reward = float(payload.get("final_reward", {}).get("total_reward", -999.0))
+        violations = int(payload.get("violations", -1))
+        terminal_success = bool(payload.get("final_reward", {}).get("terminal_success", False))
+        raise RuntimeError(
+            "Task 3 anchor trajectory failed. "
+            f"terminal_success={terminal_success} reward={final_reward} violations={violations}. "
+            "Stop training and fix the environment/path first."
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -216,28 +282,79 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-url", default=ACTIVE_ENV_URL)
     parser.add_argument("--task-id", default="task3")
     parser.add_argument("--seed-start", type=int, default=100)
-    parser.add_argument("--num-episodes", type=int, default=32)
+    parser.add_argument("--num-episodes", type=int, default=8)
     parser.add_argument("--output-dir", default="artifacts/phase1_grpo")
-    parser.add_argument("--max-steps", type=int, default=60)
-    parser.add_argument("--num-generations", type=int, default=4)
+    parser.add_argument("--max-steps", type=int, default=100)
+    parser.add_argument("--num-generations", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=1)
-    parser.add_argument("--gradient-accumulation-steps", type=int, default=4)
-    parser.add_argument("--learning-rate", type=float, default=1e-5)
+    parser.add_argument("--gradient-accumulation-steps", type=int, default=2)
+    parser.add_argument("--learning-rate", type=float, default=5e-6)
+    parser.add_argument("--grpo-epsilon", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--max-actions", type=int, default=10)
-    parser.add_argument("--max-new-tokens", type=int, default=192)
+    parser.add_argument("--max-actions", type=int, default=14)
+    parser.add_argument("--max-new-tokens", type=int, default=384)
     parser.add_argument("--collect-debug-rollouts", action="store_true")
+    parser.add_argument("--local-debug-mode", action="store_true")
+    parser.add_argument("--sft-warmstart-epochs", type=int, default=50)
+    parser.add_argument("--sft-learning-rate", type=float, default=5e-6)
     return parser.parse_args()
+
+
+def _anchor_warmstart_text(task_id: str, max_actions: int, tokenizer: Any) -> str:
+    with httpx.Client(base_url=ACTIVE_ENV_URL, timeout=ACTIVE_TIMEOUT) as client:
+        response = client.post("/reset", json={"task_id": task_id, "seed": TASK3_ANCHOR_SEED})
+        response.raise_for_status()
+        observation = response.json()["observation"]
+    prompt = build_episode_prompt(
+        observation,
+        task_id=task_id,
+        seed=TASK3_ANCHOR_SEED,
+        max_actions=max_actions,
+        tokenizer=tokenizer,
+    )
+    # Use compact trajectory (~200 tokens) that fits within max_new_tokens budget
+    return f"{prompt}{task3_compact_completion()}"
+
+
+def run_anchor_warmstart(
+    model: AutoModelForCausalLM,
+    tokenizer: AutoTokenizer,
+    task_id: str,
+    max_actions: int,
+    epochs: int,
+    learning_rate: float,
+) -> None:
+    if task_id != "task3" or epochs <= 0:
+        return
+    training_text = _anchor_warmstart_text(task_id=task_id, max_actions=max_actions, tokenizer=tokenizer)
+    encoded = tokenizer(training_text, return_tensors="pt")
+    encoded = {key: value.to(model.device) for key, value in encoded.items()}
+    labels = encoded["input_ids"].clone()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    model.train()
+    for _ in range(epochs):
+        optimizer.zero_grad(set_to_none=True)
+        outputs = model(**encoded, labels=labels)
+        outputs.loss.backward()
+        optimizer.step()
 
 
 def main() -> None:
     global ACTIVE_ENV_URL, ACTIVE_DEFAULT_TASK_ID
 
+    from trl import GRPOConfig, GRPOTrainer
+
     args = parse_args()
     ACTIVE_ENV_URL = args.env_url
     ACTIVE_DEFAULT_TASK_ID = args.task_id
+    if args.local_debug_mode:
+        os.environ["LOCAL_SIGNAL_DEBUG"] = "1"
+
+    # Enable intermediate reward shaping so non-terminal steps produce signal
+    os.environ.setdefault("ENABLE_INTERMEDIATE_SHAPING", "1")
 
     set_seed(args.seed)
+    wait_for_server(ACTIVE_ENV_URL)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -249,6 +366,14 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
         low_cpu_mem_usage=False,
+    )
+    run_anchor_warmstart(
+        model=model,
+        tokenizer=tokenizer,
+        task_id=args.task_id,
+        max_actions=args.max_actions,
+        epochs=args.sft_warmstart_epochs,
+        learning_rate=args.sft_learning_rate,
     )
 
     trainer = GRPOTrainer(
@@ -263,6 +388,7 @@ def main() -> None:
             per_device_train_batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
             learning_rate=args.learning_rate,
+            epsilon=args.grpo_epsilon,
             max_completion_length=args.max_new_tokens,
             logging_steps=5,
             save_steps=25,

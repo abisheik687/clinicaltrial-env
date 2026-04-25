@@ -39,7 +39,14 @@ def extract_reward_series(log_history: list[dict]) -> tuple[list[int], list[floa
     rewards: list[float] = []
     for index, record in enumerate(log_history):
         reward_value = None
-        for key in ("reward", "rewards/reward", "train_reward", "objective/reward"):
+        for key in (
+            "http_replay_reward_mean",
+            "reward",
+            "rewards/environment_reward/mean",
+            "rewards/reward",
+            "train_reward",
+            "objective/reward",
+        ):
             if key in record and isinstance(record[key], (int, float)):
                 reward_value = float(record[key])
                 break
@@ -70,8 +77,15 @@ def save_reward_curve(train_log: list[dict], baseline_eval: dict, output_path: P
         steps = [1]
         rewards = [0.0]
 
+    window = min(max(1, window), 30)
     smoothed_rewards = moving_average(rewards, window)
     baseline_avg_reward = float(baseline_eval["aggregate"].get("mean_final_reward", 0.0))
+    baseline_output = output_path.parent.parent / "eval" / "baseline_avg_reward.json"
+    baseline_output.parent.mkdir(parents=True, exist_ok=True)
+    baseline_output.write_text(
+        json.dumps({"baseline_avg_reward": baseline_avg_reward}, indent=2),
+        encoding="utf-8",
+    )
     first_reward = smoothed_rewards[0]
     last_reward = smoothed_rewards[-1]
     y_values = [baseline_avg_reward, *smoothed_rewards]

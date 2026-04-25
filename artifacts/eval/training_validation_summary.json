@@ -1,0 +1,251 @@
+{
+  "passed": false,
+  "gates": {
+    "trajectory_reward_std_positive": false,
+    "episode_done_rate_positive": false,
+    "valid_trajectory_rate_min": false,
+    "clipped_ratio_below_threshold": false,
+    "reward_delta_min": false,
+    "unsafe_rate_zero": true,
+    "no_fallback_used": false,
+    "structural_behavior_diff": false
+  },
+  "hard_failure_same_success_reward_behavior": true,
+  "reward_series": [
+    -1.0
+  ],
+  "reward_delta": 0.0,
+  "initial_avg_reward": -1.0,
+  "final_avg_reward": -1.0,
+  "baseline_avg_reward": 0.6667,
+  "trained_avg_reward": 0.6667,
+  "max_clipped_ratio": 1.0,
+  "advantage_mean": null,
+  "advantage_std": null,
+  "trajectory_final_reward_std": 0.0,
+  "episode_done_rate": 0.0,
+  "valid_trajectory_rate": 0.0,
+  "unsafe_rate": 0.0,
+  "behavior_diff": {
+    "seed": 200,
+    "structural_behavior_diff": false,
+    "length_differs": false,
+    "decision_points_differ": false,
+    "untrained_model": {
+      "success": false,
+      "final_reward": 0.5,
+      "action_types": [
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "exclude"
+      ],
+      "decision_points": [
+        "exclude"
+      ],
+      "actions": [
+        {
+          "step": 1,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 2,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 3,
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 4,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "confidence_score": 0.76
+        },
+        {
+          "step": 5,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-004",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 6,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 7,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-006",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 8,
+          "action_type": "ask_clarification",
+          "clarification_target": "EXC-001",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 9,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-001",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 10,
+          "action_type": "ask_clarification",
+          "clarification_target": "EXC-002",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 11,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-002",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 12,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-003",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 13,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-004",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 14,
+          "action_type": "exclude",
+          "confidence_score": 0.68
+        }
+      ]
+    },
+    "rl_trained_model": {
+      "success": false,
+      "final_reward": 0.5,
+      "action_types": [
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "exclude"
+      ],
+      "decision_points": [
+        "exclude"
+      ],
+      "actions": [
+        {
+          "step": 1,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 2,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 3,
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 4,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "confidence_score": 0.76
+        },
+        {
+          "step": 5,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-004",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 6,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 7,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-006",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 8,
+          "action_type": "ask_clarification",
+          "clarification_target": "EXC-001",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 9,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-001",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 10,
+          "action_type": "ask_clarification",
+          "clarification_target": "EXC-002",
+          "confidence_score": 0.55
+        },
+        {
+          "step": 11,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-002",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 12,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-003",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 13,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-004",
+          "confidence_score": 0.45
+        },
+        {
+          "step": 14,
+          "action_type": "exclude",
+          "confidence_score": 0.68
+        }
+      ]
+    }
+  }
+}

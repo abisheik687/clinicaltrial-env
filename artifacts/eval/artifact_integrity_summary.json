@@ -1,0 +1,61 @@
+{
+  "json": [
+    {
+      "path": "artifacts\\eval\\baseline_avg_reward.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\base_model_task3_eval.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\trained_task3_eval.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\before_after_trajectories.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\training_validation_summary.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    }
+  ],
+  "png": [
+    {
+      "path": "artifacts\\plots\\training_reward_curve.png",
+      "exists": true,
+      "valid_png_signature": true,
+      "bytes": 50105
+    },
+    {
+      "path": "artifacts\\plots\\heldout_base_vs_trained.png",
+      "exists": true,
+      "valid_png_signature": true,
+      "bytes": 40580
+    },
+    {
+      "path": "artifacts\\plots\\backup_training_reward_curve.png",
+      "exists": true,
+      "valid_png_signature": true,
+      "bytes": 50105
+    }
+  ],
+  "report": {
+    "path": "TRAINING_REPORT.md",
+    "exists": true,
+    "renders": true,
+    "missing": []
+  },
+  "passed": true
+}
