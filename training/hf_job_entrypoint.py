@@ -24,6 +24,7 @@ def log(message: str) -> None:
 
 
 def wait_for_health(timeout_seconds: int) -> None:
+    log("waiting for /health")
     deadline = time.time() + timeout_seconds
     last_error = ""
     while time.time() < deadline:
@@ -66,7 +67,7 @@ def start_server() -> subprocess.Popen:
         "--port",
         "7860",
     ]
-    log("starting FastAPI environment in background")
+    log("starting FastAPI environment")
     return subprocess.Popen(command, cwd=PROJECT_ROOT, env=env)
 
 

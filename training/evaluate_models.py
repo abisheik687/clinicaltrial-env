@@ -41,6 +41,8 @@ class LocalModelClient:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "left"
         self.model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=False)
+        if torch.cuda.is_available():
+            self.model.to("cuda")
         if hasattr(self.model.generation_config, "max_length"):
             self.model.generation_config.max_length = None
         for field in ("temperature", "top_p", "top_k"):

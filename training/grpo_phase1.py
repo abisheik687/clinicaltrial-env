@@ -175,6 +175,8 @@ def collect_rollouts(
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "left"
     model = AutoModelForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=False)
+    if torch.cuda.is_available():
+        model.to("cuda")
     if hasattr(model.generation_config, "max_length"):
         model.generation_config.max_length = None
     for field in ("temperature", "top_p", "top_k"):
@@ -367,6 +369,8 @@ def main() -> None:
         args.model,
         low_cpu_mem_usage=False,
     )
+    if torch.cuda.is_available():
+        model.to("cuda")
     run_anchor_warmstart(
         model=model,
         tokenizer=tokenizer,
