@@ -34,6 +34,14 @@ def compact_actions(episode: dict[str, Any]) -> list[dict[str, Any]]:
     return actions
 
 
+def has_structural_diff(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    before_types = action_types(before)
+    after_types = action_types(after)
+    before_decisions = [action for action in before_types if action in DECISION_ACTIONS]
+    after_decisions = [action for action in after_types if action in DECISION_ACTIONS]
+    return len(before_types) != len(after_types) or before_decisions != after_decisions
+
+
 def find_matching_pair(base_eval: dict[str, Any], trained_eval: dict[str, Any], preferred_seed: int | None) -> tuple[dict[str, Any], dict[str, Any]]:
     base_by_seed = {episode.get("seed"): episode for episode in base_eval.get("episodes", [])}
     trained_by_seed = {episode.get("seed"): episode for episode in trained_eval.get("episodes", [])}
@@ -42,6 +50,9 @@ def find_matching_pair(base_eval: dict[str, Any], trained_eval: dict[str, Any], 
     common_seeds = sorted(seed for seed in base_by_seed if seed in trained_by_seed)
     if not common_seeds:
         raise SystemExit("No matching seed found between baseline and trained eval artifacts.")
+    for seed in common_seeds:
+        if has_structural_diff(base_by_seed[seed], trained_by_seed[seed]):
+            return base_by_seed[seed], trained_by_seed[seed]
     seed = common_seeds[0]
     return base_by_seed[seed], trained_by_seed[seed]
 

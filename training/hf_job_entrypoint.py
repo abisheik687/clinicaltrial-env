@@ -119,7 +119,7 @@ def main() -> None:
             "--seed-start",
             "200",
             "--num-seeds",
-            "3",
+            "5",
             "--max-new-tokens",
             str(args.max_new_tokens),
         ]
