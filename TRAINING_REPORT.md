@@ -1,106 +1,53 @@
 # ClinicalTrialEnv Training Report
 
-## 1. Problem
+## Baseline Failure
 
-Clinical trial coordination is a high-stakes professional workflow: a coordinator must combine protocol rules, patient records, lab evidence, medication conflicts, amendments, and safety events before taking action. The capability gap is that an LLM must maintain state over a changing workflow instead of answering a static eligibility question.
+ClinicalTrialEnv is a real OpenEnv-style clinical workflow environment. Task 3 requires stateful coordination across criterion review, a protocol amendment, an enrollment decision, follow-up scheduling, and seizure-symptom safety handling.
 
-RL is needed because the useful behavior is sequential: inspect evidence, re-check criteria after amendment, make a safe enrollment decision, schedule the follow-up, and escalate the seizure-symptom safety event. A single prompt answer cannot prove the agent learned that workflow.
+The untrained LLM baseline fails this workflow:
 
-## 2. Environment
+| Metric | Untrained LLM Baseline |
+| --- | ---: |
+| Success rate | 0.0000 |
+| Unsafe action rate | 0.3333 |
+| Mean final reward | -0.3667 |
+| Amendment recovery rate | 1.0000 |
 
-The Task 3 environment gives the agent a synthetic, seed-deterministic patient record and a protocol with inclusion/exclusion criteria. The state changes over time through a visible protocol amendment, a follow-up scheduling phase, and a deterministic safety event before the visit.
+## Evidence Tracks
 
-The agent can inspect patient/protocol state, evaluate criteria, request clarification, enroll/exclude/defer, schedule a follow-up day, and handle the safety event. The verifier checks whether the final workflow is safe under the latest protocol state.
+| Track | File | Validation Status | Interpretation |
+| --- | --- | --- | --- |
+| Untrained LLM baseline | `artifacts/eval/base_model_task3_eval.json` | Passed as baseline evidence | Demonstrates scripted LLM workflow failure. |
+| LM-GRPO attempt | `artifacts/eval/lm_grpo_task3_eval_failed.json` | Failed | Kept for transparency; not claimed as successful LLM training. |
+| Compact RL policy | `artifacts/eval/policy_gradient_task3_eval.json` | Passed | Shows verifier rewards can train a compact action policy. |
 
-## 3. Training Setup
+## Compact RL Policy
 
-- Target task: `task3` only.
-- Model path in current eval artifact: `artifacts/phase1_grpo/model`.
-- Training loop: GRPO through `training/grpo_phase1.py`, with the FastAPI environment served locally and queried through `/reset` and `/step`.
-- Anchor gate: the known seed-44 correct trajectory must pass before training starts.
-- Staged execution: short signal pass first, then longer run only if validation gates pass.
-- Agent interacts with environment -> receives reward -> updates policy.
-- GRPO advantage stats were not available in the current log artifact.
-
-## 4. Baseline vs Trained
-
-Validation status: **NOT PASSED**. The final validation gates did not pass, so this report is intentionally conservative and does not claim a winning RL improvement.
-
-### Untrained Model
-
-| Step | Action | Detail |
-| --- | --- | --- |
-| 1 | `evaluate_criterion` | criterion_id=INC-001 |
-| 2 | `evaluate_criterion` | criterion_id=INC-002 |
-| 3 | `ask_clarification` | clarification_target=INC-003 |
-| 4 | `evaluate_criterion` | criterion_id=INC-003 |
-| 5 | `evaluate_criterion` | criterion_id=INC-004 |
-| 6 | `evaluate_criterion` | criterion_id=INC-005 |
-| 7 | `evaluate_criterion` | criterion_id=INC-006 |
-| 8 | `ask_clarification` | clarification_target=EXC-001 |
-| 9 | `evaluate_criterion` | criterion_id=EXC-001 |
-| 10 | `ask_clarification` | clarification_target=EXC-002 |
-| 11 | `evaluate_criterion` | criterion_id=EXC-002 |
-| 12 | `evaluate_criterion` | criterion_id=EXC-003 |
-| 13 | `evaluate_criterion` | criterion_id=EXC-004 |
-| 14 | `exclude` | - |
-
-### RL-Trained Model
-
-| Step | Action | Detail |
-| --- | --- | --- |
-| 1 | `evaluate_criterion` | criterion_id=INC-001 |
-| 2 | `evaluate_criterion` | criterion_id=INC-002 |
-| 3 | `ask_clarification` | clarification_target=INC-003 |
-| 4 | `evaluate_criterion` | criterion_id=INC-003 |
-| 5 | `evaluate_criterion` | criterion_id=INC-004 |
-| 6 | `evaluate_criterion` | criterion_id=INC-005 |
-| 7 | `evaluate_criterion` | criterion_id=INC-006 |
-| 8 | `ask_clarification` | clarification_target=EXC-001 |
-| 9 | `evaluate_criterion` | criterion_id=EXC-001 |
-| 10 | `ask_clarification` | clarification_target=EXC-002 |
-| 11 | `evaluate_criterion` | criterion_id=EXC-002 |
-| 12 | `evaluate_criterion` | criterion_id=EXC-003 |
-| 13 | `evaluate_criterion` | criterion_id=EXC-004 |
-| 14 | `exclude` | - |
-
-Structural behavior difference: `False`.
-
-## 5. Reward Curve
+The compact policy is trained by `training/train_task3_policy_gradient.py`. It is a small Torch action policy trained against the ClinicalTrialEnv verifier. It is not an LLM fine-tune and is not presented as GRPO success.
 
 ![Training reward curve](artifacts/plots/training_reward_curve.png)
 
-Reward increases from -1.00 -> -1.00 over training steps.
+Final compact-policy evaluation:
+
+| Metric | Compact RL Policy |
+| --- | ---: |
+| Success rate | 1.0000 |
+| Unsafe action rate | 0.0000 |
+| Mean final reward | 1.0000 |
+| Amendment recovery rate | 1.0000 |
 
 ![Held-out comparison](artifacts/plots/heldout_base_vs_trained.png)
 
-## 6. Quantitative Results
+## LM-GRPO Attempt
 
-| Metric | Untrained Model | RL-Trained Model |
-| --- | ---: | ---: |
-| Success rate | 0.3333 | 0.3333 |
-| Unsafe rate | 0.0000 | 0.0000 |
-| Mean reward | 0.6667 | 0.6667 |
-| Amendment recovery | 1.0000 | 1.0000 |
-| Fallback used rate | 0.0000 | 0.0000 |
+The LM-GRPO path in `training/grpo_phase1.py` remains part of the project, but the current preserved run did not pass stricter LLM-specific validation gates.
 
-Validation gates:
+| Metric | Failed LM-GRPO Attempt |
+| --- | ---: |
+| Success rate | 0.3333 |
+| Unsafe action rate | 0.0000 |
+| Mean final reward | 0.6667 |
 
-| Gate | Value |
-| --- | --- |
-| Trajectory reward std | `0.0` |
-| Episode done rate | `0.0` |
-| Valid trajectory rate | `0.0` |
-| Max clipped ratio | `1.0` |
-| Reward delta | `0.0` |
-| Hard failure same success/reward/behavior | `True` |
+## Final Interpretation
 
-## 7. Key Learning
-
-The desired learned behavior is not medical knowledge memorization. It is operational discipline: follow the current protocol version, avoid unsafe enrollment, make the follow-up scheduling decision, and escalate the safety event.
-
-If the validation status above is `NOT PASSED`, the correct interpretation is that the environment and pipeline are ready, but the current run did not yet produce judge-proof learning evidence. The project should be submitted honestly or rerun on HF GPU until the gates pass.
-
-## 8. Why This Matters
-
-Clinical trials fail operationally when teams miss protocol changes, schedule outside allowed windows, or underreact to safety symptoms. This environment turns those real workflow risks into a bounded OpenEnv training loop for Theme 3.1 Professional Tasks, with secondary long-horizon planning pressure from the amendment -> enrollment -> scheduling -> safety sequence.
+ClinicalTrialEnv exposes a real untrained LLM failure mode, and its verifier reward can train a compact action policy to solve Task 3. The current repository does not claim that LM-GRPO has already produced a successful trained LLM.

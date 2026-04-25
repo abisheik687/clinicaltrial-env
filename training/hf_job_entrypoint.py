@@ -164,7 +164,7 @@ def main() -> None:
                 "--model-name",
                 f"{signal_dir}/model",
                 "--output",
-                "artifacts/eval/trained_task3_eval_signal.json",
+                "artifacts/eval/lm_grpo_task3_eval_signal.json",
             ],
             started,
             args.max_runtime_minutes,
@@ -176,7 +176,7 @@ def main() -> None:
                 "--baseline-eval",
                 "artifacts/eval/base_model_task3_eval.json",
                 "--trained-eval",
-                "artifacts/eval/trained_task3_eval_signal.json",
+                "artifacts/eval/lm_grpo_task3_eval_signal.json",
                 "--output",
                 "artifacts/eval/before_after_trajectories.json",
             ],
@@ -194,7 +194,7 @@ def main() -> None:
                 "--baseline-eval",
                 "artifacts/eval/base_model_task3_eval.json",
                 "--trained-eval",
-                "artifacts/eval/trained_task3_eval_signal.json",
+                "artifacts/eval/lm_grpo_task3_eval_signal.json",
             ],
             started,
             args.max_runtime_minutes,
@@ -202,7 +202,7 @@ def main() -> None:
         log("100-step signal pass passed hard validation gates")
 
         final_dir = signal_dir if args.skip_long_run else "artifacts/phase1_grpo"
-        final_eval = "artifacts/eval/trained_task3_eval_signal.json"
+        final_eval = "artifacts/eval/lm_grpo_task3_eval_signal.json"
         if not args.skip_long_run:
             run_command(
                 [
@@ -231,7 +231,7 @@ def main() -> None:
                 started,
                 args.max_runtime_minutes,
             )
-            final_eval = "artifacts/eval/trained_task3_eval.json"
+            final_eval = "artifacts/eval/lm_grpo_task3_eval_failed.json"
             run_command(
                 [*common_eval, "--model-name", f"{final_dir}/model", "--output", final_eval],
                 started,
@@ -270,6 +270,9 @@ def main() -> None:
             [
                 sys.executable,
                 "training/validate_training_outputs.py",
+                "--mode",
+                "lm_grpo",
+                "--allow-failed",
                 "--train-log",
                 f"{final_dir}/train_log_history.json",
                 "--rollout-debug",
@@ -278,6 +281,8 @@ def main() -> None:
                 "artifacts/eval/base_model_task3_eval.json",
                 "--trained-eval",
                 final_eval,
+                "--output",
+                "artifacts/eval/lm_grpo_validation_summary_failed.json",
             ],
             started,
             args.max_runtime_minutes,
@@ -288,7 +293,7 @@ def main() -> None:
                 "training/generate_training_report.py",
                 "--baseline-eval",
                 "artifacts/eval/base_model_task3_eval.json",
-                "--trained-eval",
+                "--lm-grpo-eval",
                 final_eval,
             ],
             started,

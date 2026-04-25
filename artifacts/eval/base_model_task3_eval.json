@@ -7,44 +7,47 @@
     "task3"
   ],
   "aggregate": {
-    "success_rate": 0.3333,
-    "unsafe_rate": 0.0,
-    "mean_final_reward": 0.6667,
+    "success_rate": 0.0,
+    "unsafe_rate": 0.3333,
+    "fallback_used_rate": 0.0,
+    "mean_final_reward": -0.3667,
     "amendment_recovery_rate": 1.0,
-    "eligibility_component_score": 0.3333,
+    "eligibility_component_score": 0.6667,
     "amendment_component_score": 1.0,
-    "scheduling_component_score": -1.0,
-    "safety_component_score": -1.0
+    "scheduling_component_score": 0.0,
+    "safety_component_score": 0.0
   },
   "aggregate_by_task": {
     "task3": {
-      "success_rate": 0.3333,
-      "unsafe_rate": 0.0,
-      "mean_final_reward": 0.6667,
+      "success_rate": 0.0,
+      "unsafe_rate": 0.3333,
+      "fallback_used_rate": 0.0,
+      "mean_final_reward": -0.3667,
       "amendment_recovery_rate": 1.0,
-      "eligibility_component_score": 0.3333,
+      "eligibility_component_score": 0.6667,
       "amendment_component_score": 1.0,
-      "scheduling_component_score": -1.0,
-      "safety_component_score": -1.0
+      "scheduling_component_score": 0.0,
+      "safety_component_score": 0.0
     }
   },
   "episodes": [
     {
       "task_id": "task3",
       "seed": 200,
-      "steps": 14,
-      "final_reward": 0.5,
+      "steps": 20,
+      "final_reward": -0.05,
       "terminal_success": false,
       "unsafe_action": false,
+      "fallback_used": false,
       "diagnostic_metrics": {
-        "criterion_evaluation_accuracy": 0.5,
-        "clarification_efficiency": 1.0,
+        "criterion_evaluation_accuracy": 1.0,
+        "clarification_efficiency": 0.8,
         "unsafe_action_rate": 0.0,
         "amendment_recovery_rate": 1.0,
-        "eligibility_component_score": 0.0,
+        "eligibility_component_score": 1.0,
         "amendment_component_score": 1.0,
-        "scheduling_component_score": -1.0,
-        "safety_component_score": -1.0
+        "scheduling_component_score": 0.0,
+        "safety_component_score": 0.0
       },
       "trajectory": [
         {
@@ -53,9 +56,14 @@
           "evaluation": {
             "criterion_id": "INC-001",
             "verdict": "met",
-            "reasoning": "Patient age is 15, compared with the 4-45 inclusion range."
+            "reasoning": "age ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
+        },
+        {
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -63,14 +71,14 @@
           "evaluation": {
             "criterion_id": "INC-002",
             "verdict": "met",
-            "reasoning": "MECP2 mutation marker is 1.0 with estimated certainty."
+            "reasoning": "mutation ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
         },
         {
           "action_type": "ask_clarification",
           "clarification_target": "INC-003",
-          "confidence_score": 0.55
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -78,113 +86,104 @@
           "evaluation": {
             "criterion_id": "INC-003",
             "verdict": "met",
-            "reasoning": "CSS score is 23.6 and the valid range is 10-36 after applying amendment state."
+            "reasoning": "css ok"
           },
-          "confidence_score": 0.76
+          "confidence_score": 0.5
         },
         {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-004",
-          "evaluation": {
-            "criterion_id": "INC-004",
-            "verdict": "uncertain",
-            "reasoning": "Prior gene therapy exposure is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
+          "action_type": "enroll",
+          "final_decision_reason": "Criteria pass.",
+          "confidence_score": 0.5
         },
         {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-005",
-          "evaluation": {
-            "criterion_id": "INC-005",
-            "verdict": "met",
-            "reasoning": "ALT is 42.1 and AST is 59.3, both compared with three times their reference upper limits."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-006",
-          "evaluation": {
-            "criterion_id": "INC-006",
-            "verdict": "met",
-            "reasoning": "Weight is 37.0 kg and must be at least 13 kg."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-001",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-001",
-          "evaluation": {
-            "criterion_id": "EXC-001",
-            "verdict": "uncertain",
-            "reasoning": "Seizure control status requires clarification because it is intentionally ambiguous in task 3."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-002",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-002",
-          "evaluation": {
-            "criterion_id": "EXC-002",
-            "verdict": "uncertain",
-            "reasoning": "AAV hypersensitivity requires clarification because the public observation does not finalize it."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-003",
-          "evaluation": {
-            "criterion_id": "EXC-003",
-            "verdict": "uncertain",
-            "reasoning": "Concurrent interventional trial enrollment is not explicitly surfaced in the public observation."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-004",
-          "evaluation": {
-            "criterion_id": "EXC-004",
-            "verdict": "uncertain",
-            "reasoning": "Life expectancy is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
+          "action_type": "handle_safety_event",
+          "safety_response": "escalate",
+          "confidence_score": 0.5
         },
         {
           "action_type": "exclude",
-          "confidence_score": 0.68,
-          "final_decision_reason": "At least one inclusion criterion is missing, failed, or unresolved after structured review."
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
         }
       ]
     },
     {
       "task_id": "task3",
       "seed": 201,
-      "steps": 14,
-      "final_reward": 1.0,
-      "terminal_success": true,
-      "unsafe_action": false,
+      "steps": 6,
+      "final_reward": -1.0,
+      "terminal_success": false,
+      "unsafe_action": true,
+      "fallback_used": false,
       "diagnostic_metrics": {
-        "criterion_evaluation_accuracy": 0.5,
-        "clarification_efficiency": 1.0,
-        "unsafe_action_rate": 0.0,
+        "criterion_evaluation_accuracy": 1.0,
+        "clarification_efficiency": 0.8,
+        "unsafe_action_rate": 1.0,
         "amendment_recovery_rate": 1.0,
-        "eligibility_component_score": 1.0,
+        "eligibility_component_score": 0.0,
         "amendment_component_score": 1.0,
-        "scheduling_component_score": -1.0,
-        "safety_component_score": -1.0
+        "scheduling_component_score": 0.0,
+        "safety_component_score": 0.0
       },
       "trajectory": [
         {
@@ -193,9 +192,14 @@
           "evaluation": {
             "criterion_id": "INC-001",
             "verdict": "met",
-            "reasoning": "Patient age is 40, compared with the 4-45 inclusion range."
+            "reasoning": "age ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
+        },
+        {
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -203,14 +207,14 @@
           "evaluation": {
             "criterion_id": "INC-002",
             "verdict": "met",
-            "reasoning": "MECP2 mutation marker is 1.0 with estimated certainty."
+            "reasoning": "mutation ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
         },
         {
           "action_type": "ask_clarification",
           "clarification_target": "INC-003",
-          "confidence_score": 0.55
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -218,113 +222,34 @@
           "evaluation": {
             "criterion_id": "INC-003",
             "verdict": "met",
-            "reasoning": "CSS score is 20.2 and the valid range is 10-36 after applying amendment state."
+            "reasoning": "css ok"
           },
-          "confidence_score": 0.76
+          "confidence_score": 0.5
         },
         {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-004",
-          "evaluation": {
-            "criterion_id": "INC-004",
-            "verdict": "uncertain",
-            "reasoning": "Prior gene therapy exposure is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-005",
-          "evaluation": {
-            "criterion_id": "INC-005",
-            "verdict": "met",
-            "reasoning": "ALT is 45.8 and AST is 33.8, both compared with three times their reference upper limits."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-006",
-          "evaluation": {
-            "criterion_id": "INC-006",
-            "verdict": "met",
-            "reasoning": "Weight is 40.4 kg and must be at least 13 kg."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-001",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-001",
-          "evaluation": {
-            "criterion_id": "EXC-001",
-            "verdict": "uncertain",
-            "reasoning": "Seizure control status requires clarification because it is intentionally ambiguous in task 3."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-002",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-002",
-          "evaluation": {
-            "criterion_id": "EXC-002",
-            "verdict": "uncertain",
-            "reasoning": "AAV hypersensitivity requires clarification because the public observation does not finalize it."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-003",
-          "evaluation": {
-            "criterion_id": "EXC-003",
-            "verdict": "uncertain",
-            "reasoning": "Concurrent interventional trial enrollment is not explicitly surfaced in the public observation."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-004",
-          "evaluation": {
-            "criterion_id": "EXC-004",
-            "verdict": "uncertain",
-            "reasoning": "Life expectancy is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "exclude",
-          "confidence_score": 0.68,
-          "final_decision_reason": "At least one inclusion criterion is missing, failed, or unresolved after structured review."
+          "action_type": "enroll",
+          "final_decision_reason": "Criteria pass.",
+          "confidence_score": 0.5
         }
       ]
     },
     {
       "task_id": "task3",
       "seed": 202,
-      "steps": 14,
-      "final_reward": 0.5,
+      "steps": 20,
+      "final_reward": -0.05,
       "terminal_success": false,
       "unsafe_action": false,
+      "fallback_used": false,
       "diagnostic_metrics": {
-        "criterion_evaluation_accuracy": 0.5,
-        "clarification_efficiency": 1.0,
+        "criterion_evaluation_accuracy": 1.0,
+        "clarification_efficiency": 0.8,
         "unsafe_action_rate": 0.0,
         "amendment_recovery_rate": 1.0,
-        "eligibility_component_score": 0.0,
+        "eligibility_component_score": 1.0,
         "amendment_component_score": 1.0,
-        "scheduling_component_score": -1.0,
-        "safety_component_score": -1.0
+        "scheduling_component_score": 0.0,
+        "safety_component_score": 0.0
       },
       "trajectory": [
         {
@@ -333,9 +258,14 @@
           "evaluation": {
             "criterion_id": "INC-001",
             "verdict": "met",
-            "reasoning": "Patient age is 4, compared with the 4-45 inclusion range."
+            "reasoning": "age ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
+        },
+        {
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -343,14 +273,14 @@
           "evaluation": {
             "criterion_id": "INC-002",
             "verdict": "met",
-            "reasoning": "MECP2 mutation marker is 1.0 with estimated certainty."
+            "reasoning": "mutation ok"
           },
-          "confidence_score": 0.72
+          "confidence_score": 0.5
         },
         {
           "action_type": "ask_clarification",
           "clarification_target": "INC-003",
-          "confidence_score": 0.55
+          "confidence_score": 0.5
         },
         {
           "action_type": "evaluate_criterion",
@@ -358,96 +288,91 @@
           "evaluation": {
             "criterion_id": "INC-003",
             "verdict": "met",
-            "reasoning": "CSS score is 14.1 and the valid range is 10-36 after applying amendment state."
+            "reasoning": "css ok"
           },
-          "confidence_score": 0.76
+          "confidence_score": 0.5
         },
         {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-004",
-          "evaluation": {
-            "criterion_id": "INC-004",
-            "verdict": "uncertain",
-            "reasoning": "Prior gene therapy exposure is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
+          "action_type": "enroll",
+          "final_decision_reason": "Criteria pass.",
+          "confidence_score": 0.5
         },
         {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-005",
-          "evaluation": {
-            "criterion_id": "INC-005",
-            "verdict": "met",
-            "reasoning": "ALT is 65.2 and AST is 33.5, both compared with three times their reference upper limits."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "INC-006",
-          "evaluation": {
-            "criterion_id": "INC-006",
-            "verdict": "met",
-            "reasoning": "Weight is 24.1 kg and must be at least 13 kg."
-          },
-          "confidence_score": 0.72
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-001",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-001",
-          "evaluation": {
-            "criterion_id": "EXC-001",
-            "verdict": "uncertain",
-            "reasoning": "Seizure control status requires clarification because it is intentionally ambiguous in task 3."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "ask_clarification",
-          "clarification_target": "EXC-002",
-          "confidence_score": 0.55
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-002",
-          "evaluation": {
-            "criterion_id": "EXC-002",
-            "verdict": "uncertain",
-            "reasoning": "AAV hypersensitivity requires clarification because the public observation does not finalize it."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-003",
-          "evaluation": {
-            "criterion_id": "EXC-003",
-            "verdict": "uncertain",
-            "reasoning": "Concurrent interventional trial enrollment is not explicitly surfaced in the public observation."
-          },
-          "confidence_score": 0.45
-        },
-        {
-          "action_type": "evaluate_criterion",
-          "criterion_id": "EXC-004",
-          "evaluation": {
-            "criterion_id": "EXC-004",
-            "verdict": "uncertain",
-            "reasoning": "Life expectancy is not directly exposed in the public observation."
-          },
-          "confidence_score": 0.45
+          "action_type": "handle_safety_event",
+          "safety_response": "escalate",
+          "confidence_score": 0.5
         },
         {
           "action_type": "exclude",
-          "confidence_score": 0.68,
-          "final_decision_reason": "At least one inclusion criterion is missing, failed, or unresolved after structured review."
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
+        },
+        {
+          "action_type": "exclude",
+          "confidence_score": 0.1,
+          "final_decision_reason": "Model could not generate a valid plan."
         }
       ]
     }
-  ]
+  ],
+  "policy_type": "untrained_lm",
+  "validation_status": "passed",
+  "training_method": "none; untrained baseline evaluation",
+  "eval_seed_start": 200,
+  "eval_num_seeds": 3
 }

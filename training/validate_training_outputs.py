@@ -82,10 +82,10 @@ def structural_diff(before_eval: dict[str, Any], after_eval: dict[str, Any]) -> 
     after_decisions = [action for action in after_actions if action in decision_actions]
     return {
         "seed": before_episode.get("seed"),
-        "before_actions": before_actions,
-        "after_actions": after_actions,
-        "before_decision_points": before_decisions,
-        "after_decision_points": after_decisions,
+        "untrained_lm_actions": before_actions,
+        "comparison_policy_actions": after_actions,
+        "untrained_lm_decision_points": before_decisions,
+        "comparison_policy_decision_points": after_decisions,
         "length_differs": len(before_actions) != len(after_actions),
         "decision_points_differ": before_decisions != after_decisions,
         "structural_behavior_diff": len(before_actions) != len(after_actions) or before_decisions != after_decisions,
@@ -107,10 +107,11 @@ def load_or_build_behavior_diff(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate final training artifacts.")
-    parser.add_argument("--train-log", default="artifacts/phase1_grpo/train_log_history.json")
+    parser.add_argument("--mode", choices=["lm_grpo", "action_policy"], default="lm_grpo")
+    parser.add_argument("--train-log", default=None)
     parser.add_argument("--rollout-debug", default="artifacts/phase1_grpo/rollout_debug.json")
     parser.add_argument("--baseline-eval", default="artifacts/eval/base_model_task3_eval.json")
-    parser.add_argument("--trained-eval", default="artifacts/eval/trained_task3_eval.json")
+    parser.add_argument("--trained-eval", default="artifacts/eval/policy_gradient_task3_eval.json")
     parser.add_argument("--output", default="artifacts/eval/training_validation_summary.json")
     parser.add_argument("--baseline-output", default="artifacts/eval/baseline_avg_reward.json")
     parser.add_argument("--before-after", default="artifacts/eval/before_after_trajectories.json")
@@ -122,11 +123,59 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.train_log is None:
+        args.train_log = (
+            "artifacts/phase1_pg/train_log_history.json"
+            if args.mode == "action_policy"
+            else "artifacts/phase1_grpo/train_log_history.json"
+        )
     train_log_payload = load_json(args.train_log)
     train_log = train_log_payload if isinstance(train_log_payload, list) else train_log_payload.get("log_history", [])
     baseline_eval = load_json(args.baseline_eval)
     trained_eval = load_json(args.trained_eval)
     rollouts = load_json(args.rollout_debug) if Path(args.rollout_debug).exists() else []
+
+    if args.mode == "action_policy":
+        rewards = reward_series(train_log)
+        baseline_avg_reward = float(baseline_eval["aggregate"].get("mean_final_reward", 0.0))
+        trained_avg_reward = float(trained_eval["aggregate"].get("mean_final_reward", 0.0))
+        reward_delta = (rewards[-1] - rewards[0]) if len(rewards) >= 2 else 0.0
+        gates = {
+            "policy_type_declared": trained_eval.get("policy_type") == "compact_action_policy",
+            "training_method_declared": bool(trained_eval.get("training_method")),
+            "seed_ranges_declared": all(
+                key in trained_eval
+                for key in ("train_seed_start", "train_seed_count", "eval_seed_start", "eval_num_seeds")
+            ),
+            "reward_delta_positive": reward_delta > 0.0,
+            "trained_beats_baseline": trained_avg_reward > baseline_avg_reward,
+            "success_rate_min_0_90": float(trained_eval["aggregate"].get("success_rate", 0.0)) >= 0.9,
+            "unsafe_rate_zero": float(trained_eval["aggregate"].get("unsafe_rate", 1.0)) == 0.0,
+            "no_fallback_used": float(trained_eval["aggregate"].get("fallback_used_rate", 1.0)) == 0.0,
+        }
+        payload = {
+            "passed": all(gates.values()),
+            "mode": args.mode,
+            "method": trained_eval.get("training_method"),
+            "gates": gates,
+            "reward_series": rewards,
+            "reward_delta": reward_delta,
+            "initial_avg_reward": rewards[0] if rewards else None,
+            "final_avg_reward": rewards[-1] if rewards else None,
+            "baseline_avg_reward": baseline_avg_reward,
+            "trained_avg_reward": trained_avg_reward,
+            "aggregate": trained_eval.get("aggregate", {}),
+        }
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        Path(args.baseline_output).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.baseline_output).write_text(json.dumps({"baseline_avg_reward": baseline_avg_reward}, indent=2), encoding="utf-8")
+        print(json.dumps(payload, indent=2))
+        if not payload["passed"] and not args.allow_failed:
+            failed = [name for name, passed in gates.items() if not passed]
+            raise SystemExit(f"Action-policy validation failed: {failed}")
+        return
 
     rewards = reward_series(train_log)
     smoothed = moving_average(rewards, window=20)

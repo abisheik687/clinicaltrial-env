@@ -13,7 +13,13 @@
       "type": "dict"
     },
     {
-      "path": "artifacts\\eval\\trained_task3_eval.json",
+      "path": "artifacts\\eval\\policy_gradient_task3_eval.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\lm_grpo_task3_eval_failed.json",
       "exists": true,
       "parseable": true,
       "type": "dict"
@@ -29,6 +35,12 @@
       "exists": true,
       "parseable": true,
       "type": "dict"
+    },
+    {
+      "path": "artifacts\\eval\\artifact_manifest.json",
+      "exists": true,
+      "parseable": true,
+      "type": "dict"
     }
   ],
   "png": [
@@ -36,19 +48,19 @@
       "path": "artifacts\\plots\\training_reward_curve.png",
       "exists": true,
       "valid_png_signature": true,
-      "bytes": 50105
+      "bytes": 54611
     },
     {
       "path": "artifacts\\plots\\heldout_base_vs_trained.png",
       "exists": true,
       "valid_png_signature": true,
-      "bytes": 40580
+      "bytes": 43724
     },
     {
       "path": "artifacts\\plots\\backup_training_reward_curve.png",
       "exists": true,
       "valid_png_signature": true,
-      "bytes": 50105
+      "bytes": 54611
     }
   ],
   "report": {

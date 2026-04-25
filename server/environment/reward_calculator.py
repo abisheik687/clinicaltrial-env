@@ -81,6 +81,15 @@ class RewardCalculator:
             feedback = self._task3_terminal_feedback(action, diagnostics, terminal_success)
         elif os.environ.get("ENABLE_INTERMEDIATE_SHAPING", "1") == "1":
             hidden = state.__dict__.setdefault("hidden_case", {})
+            if action.action_type == ActionType.EVALUATE_CRITERION and action.evaluation:
+                is_correct = truth.get(action.criterion_id) == action.evaluation.verdict
+                evaluated_history = hidden.setdefault("evaluated_history", set())
+                if is_correct and action.criterion_id not in evaluated_history:
+                    reward += 0.1
+                    evaluated_history.add(action.criterion_id)
+                elif not is_correct and action.criterion_id not in evaluated_history:
+                    reward -= 0.1
+                    evaluated_history.add(action.criterion_id)
             if action.action_type == ActionType.EVALUATE_CRITERION and action.criterion_id == "INC-003":
                 if hidden.get("amendment_detected") and not hidden.get("shaping_bonus_amendment", False):
                     reward += self.INTERMEDIATE_SHAPING_BONUS

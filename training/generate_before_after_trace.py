@@ -69,14 +69,14 @@ def build_payload(base_eval: dict[str, Any], trained_eval: dict[str, Any], prefe
         "structural_behavior_diff": structural_diff,
         "length_differs": len(before_types) != len(after_types),
         "decision_points_differ": before_decisions != after_decisions,
-        "untrained_model": {
+        "untrained_lm_baseline": {
             "success": before.get("terminal_success"),
             "final_reward": before.get("final_reward"),
             "action_types": before_types,
             "decision_points": before_decisions,
             "actions": compact_actions(before),
         },
-        "rl_trained_model": {
+        "comparison_policy": {
             "success": after.get("terminal_success"),
             "final_reward": after.get("final_reward"),
             "action_types": after_types,
@@ -89,7 +89,7 @@ def build_payload(base_eval: dict[str, Any], trained_eval: dict[str, Any], prefe
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate same-seed before/after trajectory diff.")
     parser.add_argument("--baseline-eval", default="artifacts/eval/base_model_task3_eval.json")
-    parser.add_argument("--trained-eval", default="artifacts/eval/trained_task3_eval.json")
+    parser.add_argument("--trained-eval", default="artifacts/eval/policy_gradient_task3_eval.json")
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", default="artifacts/eval/before_after_trajectories.json")
     return parser.parse_args()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the judge-facing TRAINING_REPORT.md."""
+"""Generate the honest judge-facing TRAINING_REPORT.md."""
 
 from __future__ import annotations
 
@@ -9,156 +9,84 @@ from pathlib import Path
 from typing import Any
 
 
-def load_json(path: str | Path, default: Any = None) -> Any:
-    path = Path(path)
-    if not path.exists():
-        return default
-    return json.loads(path.read_text(encoding="utf-8"))
+def load_json(path: str | Path) -> dict[str, Any]:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def metric(payload: dict[str, Any], key: str, default: float = 0.0) -> float:
-    return float(payload.get("aggregate", {}).get(key, default))
-
-
-def display_model_name(model: Any) -> str:
-    model_text = str(model or "not available")
-    normalized = model_text.replace("\\", "/")
-    marker = "artifacts/phase1_grpo/model"
-    if marker in normalized:
-        return marker
-    return model_text
-
-
-def format_actions(actions: list[dict[str, Any]]) -> str:
-    if not actions:
-        return "| Step | Action |\n| --- | --- |\n| - | No trajectory logged. |"
-    rows = ["| Step | Action | Detail |", "| --- | --- | --- |"]
-    for action in actions:
-        detail_parts = []
-        for key in ("criterion_id", "clarification_target", "followup_day", "safety_response"):
-            if key in action and action[key] is not None:
-                detail_parts.append(f"{key}={action[key]}")
-        rows.append(f"| {action.get('step', '')} | `{action.get('action_type', '')}` | {', '.join(detail_parts) or '-'} |")
-    return "\n".join(rows)
+def metric(payload: dict[str, Any], key: str) -> float:
+    return float(payload.get("aggregate", {}).get(key, 0.0))
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Write TRAINING_REPORT.md.")
+    parser = argparse.ArgumentParser(description="Write honest TRAINING_REPORT.md.")
     parser.add_argument("--baseline-eval", default="artifacts/eval/base_model_task3_eval.json")
-    parser.add_argument("--trained-eval", default="artifacts/eval/trained_task3_eval.json")
+    parser.add_argument("--lm-grpo-eval", default="artifacts/eval/lm_grpo_task3_eval_failed.json")
+    parser.add_argument("--policy-eval", default="artifacts/eval/policy_gradient_task3_eval.json")
     parser.add_argument("--validation", default="artifacts/eval/training_validation_summary.json")
-    parser.add_argument("--before-after", default="artifacts/eval/before_after_trajectories.json")
     parser.add_argument("--output", default="TRAINING_REPORT.md")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    baseline = load_json(args.baseline_eval, {})
-    trained = load_json(args.trained_eval, {})
-    validation = load_json(args.validation, {})
-    before_after = load_json(args.before_after, {})
-
-    passed = bool(validation.get("passed", False))
-    reward_start = validation.get("initial_avg_reward")
-    reward_end = validation.get("final_avg_reward")
-    reward_caption = (
-        f"Reward increases from {reward_start:.2f} -> {reward_end:.2f} over training steps"
-        if isinstance(reward_start, (int, float)) and isinstance(reward_end, (int, float))
-        else "Reward curve generated from available training log history"
-    )
-    improvement_claim = (
-        "The final validation gates passed, so the report presents this as improved RL behavior."
-        if passed
-        else "The final validation gates did not pass, so this report is intentionally conservative and does not claim a winning RL improvement."
-    )
-
-    untrained_actions = before_after.get("untrained_model", {}).get("actions", [])
-    trained_actions = before_after.get("rl_trained_model", {}).get("actions", [])
-    advantage_mean = validation.get("advantage_mean")
-    advantage_std = validation.get("advantage_std")
-    advantage_line = (
-        f"- GRPO advantage stats: `advantage_mean={advantage_mean:.4f}`, `advantage_std={advantage_std:.4f}`."
-        if isinstance(advantage_mean, (int, float)) and isinstance(advantage_std, (int, float))
-        else "- GRPO advantage stats were not available in the current log artifact."
-    )
+    baseline = load_json(args.baseline_eval)
+    lm_grpo = load_json(args.lm_grpo_eval)
+    policy = load_json(args.policy_eval)
+    validation = load_json(args.validation)
 
     markdown = f"""# ClinicalTrialEnv Training Report
 
-## 1. Problem
+## Baseline Failure
 
-Clinical trial coordination is a high-stakes professional workflow: a coordinator must combine protocol rules, patient records, lab evidence, medication conflicts, amendments, and safety events before taking action. The capability gap is that an LLM must maintain state over a changing workflow instead of answering a static eligibility question.
+ClinicalTrialEnv is a real OpenEnv-style clinical workflow environment. Task 3 requires stateful coordination across criterion review, a protocol amendment, an enrollment decision, follow-up scheduling, and seizure-symptom safety handling.
 
-RL is needed because the useful behavior is sequential: inspect evidence, re-check criteria after amendment, make a safe enrollment decision, schedule the follow-up, and escalate the seizure-symptom safety event. A single prompt answer cannot prove the agent learned that workflow.
+The untrained LLM baseline fails this workflow:
 
-## 2. Environment
+| Metric | Untrained LLM Baseline |
+| --- | ---: |
+| Success rate | {metric(baseline, 'success_rate'):.4f} |
+| Unsafe action rate | {metric(baseline, 'unsafe_rate'):.4f} |
+| Mean final reward | {metric(baseline, 'mean_final_reward'):.4f} |
+| Amendment recovery rate | {metric(baseline, 'amendment_recovery_rate'):.4f} |
 
-The Task 3 environment gives the agent a synthetic, seed-deterministic patient record and a protocol with inclusion/exclusion criteria. The state changes over time through a visible protocol amendment, a follow-up scheduling phase, and a deterministic safety event before the visit.
+## Evidence Tracks
 
-The agent can inspect patient/protocol state, evaluate criteria, request clarification, enroll/exclude/defer, schedule a follow-up day, and handle the safety event. The verifier checks whether the final workflow is safe under the latest protocol state.
+| Track | File | Validation Status | Interpretation |
+| --- | --- | --- | --- |
+| Untrained LLM baseline | `artifacts/eval/base_model_task3_eval.json` | Passed as baseline evidence | Demonstrates scripted LLM workflow failure. |
+| LM-GRPO attempt | `artifacts/eval/lm_grpo_task3_eval_failed.json` | Failed | Kept for transparency; not claimed as successful LLM training. |
+| Compact RL policy | `artifacts/eval/policy_gradient_task3_eval.json` | {'Passed' if validation.get('passed') else 'Failed'} | Shows verifier rewards can train a compact action policy. |
 
-## 3. Training Setup
+## Compact RL Policy
 
-- Target task: `task3` only.
-- Model path in current eval artifact: `{display_model_name(trained.get('model'))}`.
-- Training loop: GRPO through `training/grpo_phase1.py`, with the FastAPI environment served locally and queried through `/reset` and `/step`.
-- Anchor gate: the known seed-44 correct trajectory must pass before training starts.
-- Staged execution: short signal pass first, then longer run only if validation gates pass.
-- Agent interacts with environment -> receives reward -> updates policy.
-{advantage_line}
-
-## 4. Baseline vs Trained
-
-Validation status: **{'PASSED' if passed else 'NOT PASSED'}**. {improvement_claim}
-
-### Untrained Model
-
-{format_actions(untrained_actions)}
-
-### RL-Trained Model
-
-{format_actions(trained_actions)}
-
-Structural behavior difference: `{before_after.get('structural_behavior_diff', validation.get('behavior_diff', {}).get('structural_behavior_diff', False))}`.
-
-## 5. Reward Curve
+The compact policy is trained by `training/train_task3_policy_gradient.py`. It is a small Torch action policy trained against the ClinicalTrialEnv verifier. It is not an LLM fine-tune and is not presented as GRPO success.
 
 ![Training reward curve](artifacts/plots/training_reward_curve.png)
 
-{reward_caption}.
+Final compact-policy evaluation:
+
+| Metric | Compact RL Policy |
+| --- | ---: |
+| Success rate | {metric(policy, 'success_rate'):.4f} |
+| Unsafe action rate | {metric(policy, 'unsafe_rate'):.4f} |
+| Mean final reward | {metric(policy, 'mean_final_reward'):.4f} |
+| Amendment recovery rate | {metric(policy, 'amendment_recovery_rate'):.4f} |
 
 ![Held-out comparison](artifacts/plots/heldout_base_vs_trained.png)
 
-## 6. Quantitative Results
+## LM-GRPO Attempt
 
-| Metric | Untrained Model | RL-Trained Model |
-| --- | ---: | ---: |
-| Success rate | {metric(baseline, 'success_rate'):.4f} | {metric(trained, 'success_rate'):.4f} |
-| Unsafe rate | {metric(baseline, 'unsafe_rate'):.4f} | {metric(trained, 'unsafe_rate'):.4f} |
-| Mean reward | {metric(baseline, 'mean_final_reward'):.4f} | {metric(trained, 'mean_final_reward'):.4f} |
-| Amendment recovery | {metric(baseline, 'amendment_recovery_rate'):.4f} | {metric(trained, 'amendment_recovery_rate'):.4f} |
-| Fallback used rate | {metric(baseline, 'fallback_used_rate'):.4f} | {metric(trained, 'fallback_used_rate'):.4f} |
+The LM-GRPO path in `training/grpo_phase1.py` remains part of the project, but the current preserved run did not pass stricter LLM-specific validation gates.
 
-Validation gates:
+| Metric | Failed LM-GRPO Attempt |
+| --- | ---: |
+| Success rate | {metric(lm_grpo, 'success_rate'):.4f} |
+| Unsafe action rate | {metric(lm_grpo, 'unsafe_rate'):.4f} |
+| Mean final reward | {metric(lm_grpo, 'mean_final_reward'):.4f} |
 
-| Gate | Value |
-| --- | --- |
-| Trajectory reward std | `{validation.get('trajectory_final_reward_std')}` |
-| Episode done rate | `{validation.get('episode_done_rate')}` |
-| Valid trajectory rate | `{validation.get('valid_trajectory_rate')}` |
-| Max clipped ratio | `{validation.get('max_clipped_ratio')}` |
-| Reward delta | `{validation.get('reward_delta')}` |
-| Hard failure same success/reward/behavior | `{validation.get('hard_failure_same_success_reward_behavior')}` |
+## Final Interpretation
 
-## 7. Key Learning
-
-The desired learned behavior is not medical knowledge memorization. It is operational discipline: follow the current protocol version, avoid unsafe enrollment, make the follow-up scheduling decision, and escalate the safety event.
-
-If the validation status above is `NOT PASSED`, the correct interpretation is that the environment and pipeline are ready, but the current run did not yet produce judge-proof learning evidence. The project should be submitted honestly or rerun on HF GPU until the gates pass.
-
-## 8. Why This Matters
-
-Clinical trials fail operationally when teams miss protocol changes, schedule outside allowed windows, or underreact to safety symptoms. This environment turns those real workflow risks into a bounded OpenEnv training loop for Theme 3.1 Professional Tasks, with secondary long-horizon planning pressure from the amendment -> enrollment -> scheduling -> safety sequence.
+ClinicalTrialEnv exposes a real untrained LLM failure mode, and its verifier reward can train a compact action policy to solve Task 3. The current repository does not claim that LM-GRPO has already produced a successful trained LLM.
 """
     Path(args.output).write_text(markdown, encoding="utf-8")
     print(f"Wrote {args.output}")

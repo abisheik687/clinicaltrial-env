@@ -24,13 +24,20 @@ def resolve_input_path(primary: str, fallback: str) -> str:
 
 def label_for_eval(eval_payload: dict, default: str) -> str:
     policy = eval_payload.get("policy")
+    policy_type = eval_payload.get("policy_type")
     model = str(eval_payload.get("model", ""))
+    if policy_type == "compact_action_policy" or policy == "task3_policy_gradient":
+        return "Compact RL Policy"
+    if policy_type == "lm_grpo":
+        return "Failed LM-GRPO Attempt" if eval_payload.get("validation_status") == "failed" else "LM-GRPO Policy"
+    if policy_type == "untrained_lm":
+        return "Untrained LLM Baseline"
     if policy == "fallback":
         return "Heuristic Reference"
     if "phase1_grpo\\model" in model or model.endswith("phase1_grpo/model"):
-        return "RL-Trained Model"
+        return "LM-GRPO Policy"
     if "Qwen/Qwen2.5-0.5B-Instruct" in model:
-        return "Untrained Model"
+        return "Untrained LLM Baseline"
     return default
 
 
@@ -99,7 +106,7 @@ def save_reward_curve(train_log: list[dict], baseline_eval: dict, output_path: P
         color="#8b1e3f",
         linewidth=2.2,
         linestyle="--",
-        label="Untrained Model",
+        label=label_for_eval(baseline_eval, "Untrained LLM Baseline"),
     )
     plt.plot(
         steps,
@@ -107,9 +114,9 @@ def save_reward_curve(train_log: list[dict], baseline_eval: dict, output_path: P
         color="#1f77b4",
         marker="o",
         linewidth=2.8,
-        label="RL-Trained Model",
+        label="Training Run",
     )
-    plt.title("Task 3 Training Reward vs Untrained Baseline")
+    plt.title("Task 3 Training Reward vs Untrained LLM Baseline")
     plt.xlabel("training steps")
     plt.ylabel("avg reward")
     plt.ylim(y_min - padding, y_max + padding)
@@ -118,7 +125,7 @@ def save_reward_curve(train_log: list[dict], baseline_eval: dict, output_path: P
     plt.figtext(
         0.5,
         0.01,
-        f"Reward increases from {first_reward:.2f} -> {last_reward:.2f} over training "
+        f"Reward changes from {first_reward:.2f} -> {last_reward:.2f} over training "
         f"(moving average window={min(max(1, window), len(rewards))}).",
         ha="center",
         fontsize=10,
@@ -136,7 +143,7 @@ def save_heldout_bar_chart(baseline_eval: dict, trained_eval: dict, output_path:
     trained_values = [trained_eval["aggregate"][metric] for metric in metrics]
     positions = range(len(metrics))
     baseline_label = label_for_eval(baseline_eval, "Untrained Model")
-    trained_label = label_for_eval(trained_eval, "RL-Trained Model")
+    trained_label = label_for_eval(trained_eval, "Compact RL Policy")
 
     plt.figure(figsize=(10, 5))
     baseline_bars = plt.bar([p - 0.18 for p in positions], baseline_values, width=0.36, label=baseline_label)
@@ -144,7 +151,7 @@ def save_heldout_bar_chart(baseline_eval: dict, trained_eval: dict, output_path:
     plt.xticks(list(positions), ["Success rate", "Unsafe rate", "Amendment recovery"])
     plt.ylim(0, 1)
     plt.ylabel("Held-out score")
-    plt.title("Task 3 Baseline vs Trained Comparison")
+    plt.title("Task 3 Baseline vs Compact Policy Comparison")
     plt.legend()
     plt.grid(axis="y", alpha=0.3)
     for bar_group in (baseline_bars, trained_bars):
@@ -168,7 +175,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate reward and held-out comparison plots.")
     parser.add_argument("--train-log", default="artifacts/phase1_grpo/train_log_history.json")
     parser.add_argument("--baseline-eval", default="artifacts/eval/base_model_task3_eval.json")
-    parser.add_argument("--trained-eval", default="artifacts/eval/trained_task3_eval.json")
+    parser.add_argument("--trained-eval", default="artifacts/eval/policy_gradient_task3_eval.json")
     parser.add_argument("--output-dir", default="artifacts/plots")
     parser.add_argument("--moving-average-window", type=int, default=20)
     return parser.parse_args()

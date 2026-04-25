@@ -1,0 +1,296 @@
+{
+  "passed": false,
+  "gates": {
+    "trajectory_reward_std_positive": false,
+    "episode_done_rate_positive": false,
+    "valid_trajectory_rate_min": false,
+    "clipped_ratio_below_threshold": false,
+    "reward_delta_min": false,
+    "unsafe_rate_zero": true,
+    "no_fallback_used": false,
+    "structural_behavior_diff": true
+  },
+  "hard_failure_same_success_reward_behavior": false,
+  "reward_series": [
+    -1.0
+  ],
+  "reward_delta": 0.0,
+  "initial_avg_reward": -1.0,
+  "final_avg_reward": -1.0,
+  "baseline_avg_reward": -0.3667,
+  "trained_avg_reward": 0.6667,
+  "max_clipped_ratio": 1.0,
+  "advantage_mean": null,
+  "advantage_std": null,
+  "trajectory_final_reward_std": 0.0,
+  "episode_done_rate": 0.0,
+  "valid_trajectory_rate": 0.0,
+  "unsafe_rate": 0.0,
+  "behavior_diff": {
+    "seed": 200,
+    "structural_behavior_diff": true,
+    "length_differs": true,
+    "decision_points_differ": true,
+    "untrained_lm_baseline": {
+      "success": false,
+      "final_reward": -0.05,
+      "action_types": [
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "enroll",
+        "handle_safety_event",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude"
+      ],
+      "decision_points": [
+        "enroll",
+        "handle_safety_event",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude",
+        "exclude"
+      ],
+      "actions": [
+        {
+          "step": 1,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 2,
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 3,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 4,
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 5,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 6,
+          "action_type": "enroll",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 7,
+          "action_type": "handle_safety_event",
+          "safety_response": "escalate",
+          "confidence_score": 0.5
+        },
+        {
+          "step": 8,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 9,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 10,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 11,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 12,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 13,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 14,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 15,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 16,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 17,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 18,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 19,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        },
+        {
+          "step": 20,
+          "action_type": "exclude",
+          "confidence_score": 0.1
+        }
+      ]
+    },
+    "comparison_policy": {
+      "success": true,
+      "final_reward": 1.0,
+      "action_types": [
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "ask_clarification",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "evaluate_criterion",
+        "enroll",
+        "schedule_followup",
+        "handle_safety_event"
+      ],
+      "decision_points": [
+        "enroll",
+        "schedule_followup",
+        "handle_safety_event"
+      ],
+      "actions": [
+        {
+          "step": 1,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 2,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 3,
+          "action_type": "ask_clarification",
+          "clarification_target": "INC-003",
+          "confidence_score": 0.72
+        },
+        {
+          "step": 4,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-003",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 5,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-004",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 6,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-005",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 7,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-006",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 8,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-001",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 9,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-002",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 10,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-003",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 11,
+          "action_type": "evaluate_criterion",
+          "criterion_id": "EXC-004",
+          "confidence_score": 0.86
+        },
+        {
+          "step": 12,
+          "action_type": "enroll",
+          "confidence_score": 0.92
+        },
+        {
+          "step": 13,
+          "action_type": "schedule_followup",
+          "followup_day": 8,
+          "confidence_score": 0.94
+        },
+        {
+          "step": 14,
+          "action_type": "handle_safety_event",
+          "safety_response": "escalate",
+          "confidence_score": 0.96
+        }
+      ]
+    }
+  }
+}

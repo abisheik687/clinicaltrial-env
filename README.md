@@ -17,24 +17,24 @@ app_port: 7860
 
 # ClinicalTrialEnv
 
-## 1. Problem
+ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment. It tests whether an agent can execute a changing professional workflow: screen a synthetic patient, react to a mid-episode protocol amendment, make a safe enrollment decision, schedule follow-up when appropriate, and handle a seizure-symptom safety event.
 
-ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment. It trains an agent to make safe enrollment decisions under partial information, protocol amendments, follow-up scheduling constraints, and a safety-critical seizure-symptom event.
+The current evidence should be read carefully:
 
-The finals positioning is **OpenEnv Theme 3.1: Professional Tasks / World Modeling**. The agent must coordinate protocol rules, patient records, lab evidence, medication conflicts, and changing operational state instead of solving a static eligibility puzzle.
+- The **environment and untrained LLM baseline failure are real**.
+- The **LM-GRPO training attempt is preserved but has not passed validation**.
+- The **compact RL policy is a separate verifier-trained action policy**, not proof that the LLM checkpoint learned the workflow.
 
-Patient cases are synthetic, seed-deterministic, and generated inside the environment. Training is environment-driven, not dataset-driven, so the same case can be replayed for training, evaluation, and judge demos.
+## Environment
 
-## 2. Environment
-
-Task 3 is the locked finals showcase. One episode follows a clinical-trial coordinator workflow:
+Task 3 is the finals showcase. One episode requires the agent to:
 
 1. Screen a Rett-syndrome gene-therapy candidate.
 2. Notice a mid-episode protocol amendment.
-3. Re-check `INC-003` under the updated protocol.
+3. Re-check `INC-003` under the amended CSS threshold.
 4. Safely enroll or exclude.
-5. Schedule one follow-up visit inside day `7..10`.
-6. Handle a deterministic seizure-symptom safety event.
+5. Schedule one follow-up visit inside day `7..10` if enrolled.
+6. Escalate the deterministic seizure-symptom safety event.
 
 The public API is unchanged:
 
@@ -44,78 +44,32 @@ The public API is unchanged:
 - `GET /health`
 - `POST /validate_session`
 
-The verifier rewards the final workflow outcome:
+## Evidence Tracks
 
-- `+1`: eligibility, amendment handling, scheduling, and safety response all pass
-- `0`: incorrect or unresolved workflow
-- `-1`: unsafe enrollment
-- `-0.05`: invalid but schema-valid impossible action
-
-The seed-44 anchor path is a hard gate before training. It must end with reward `1.0`, no unsafe action, day-8 follow-up scheduling, and investigator escalation.
-
-## 3. Demo: Before Vs After
-
-The Hugging Face Space opens directly into the interactive demo. The first screen shows the case, the guided path, and a before/after proof strip:
-
-- **Untrained Model:** often stops at screening or misses operations steps.
-- **RL-Trained Model:** follows the cached verified path if live generation is invalid, slow, or unavailable.
-
-Judge walkthrough for seed `44`:
-
-1. Evaluate `INC-001` and `INC-002`.
-2. Request clarification for `INC-003`.
-3. Observe the amendment notice.
-4. Re-check `INC-003` as `met`.
-5. Finish remaining criteria.
-6. Enroll safely.
-7. Schedule follow-up on day `8`.
-8. Escalate the seizure-symptom safety event.
-
-The demo is designed to finish in under 10 seconds and always show a successful verifier path through cached replay fallback.
-
-## 4. Training Plots
-
-Current lightweight artifacts are committed for judge inspection:
-
-- [Untrained/base eval JSON](artifacts/eval/base_model_task3_eval.json)
-- [Heuristic reference eval JSON](artifacts/eval/fallback_task3_eval.json)
-- [RL-trained checkpoint eval JSON](artifacts/eval/trained_task3_eval.json)
-- [Task 3 anchor verification JSON](artifacts/eval/task3_anchor_verification.json)
-- [Training validation summary](artifacts/eval/training_validation_summary.json)
-- [Before/after trajectory trace](artifacts/eval/before_after_trajectories.json)
-- [Judge-facing training report](TRAINING_REPORT.md)
-- [GRPO log history](artifacts/phase1_grpo/train_log_history.json)
-- [Moving-average reward plot](artifacts/plots/training_reward_curve.png)
-- [Backup reward plot](artifacts/plots/backup_training_reward_curve.png)
-- [Held-out comparison plot](artifacts/plots/heldout_base_vs_trained.png)
+| Track | Artifact | Status | What It Means |
+| --- | --- | --- | --- |
+| Untrained LLM baseline | `artifacts/eval/base_model_task3_eval.json` | Valid | Shows brittle scripted behavior and unsafe enrollment risk. |
+| LM-GRPO attempt | `artifacts/eval/lm_grpo_task3_eval_failed.json` | Failed | Preserved as an honest failed LLM fine-tuning attempt. |
+| Compact RL policy | `artifacts/eval/policy_gradient_task3_eval.json` | Passed | Shows the verifier/reward loop can train an action policy on Task 3. |
 
 ![Training reward curve](artifacts/plots/training_reward_curve.png)
 
-Caption: reward is plotted as a moving average against a constant **Untrained Model** baseline so separation is visible quickly.
+Caption: compact action-policy reward improves against the untrained LLM baseline. This plot is not an LM-GRPO success claim.
 
 ![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
 
-Caption: held-out Task 3 comparison for **Untrained Model** vs **RL-Trained Model**.
+Caption: held-out Task 3 comparison for the **Untrained LLM Baseline** and **Compact RL Policy**.
 
-Current interim metrics:
+## Current Metrics
 
-| Metric | Untrained Model | RL-Trained Model |
-| --- | ---: | ---: |
-| Success rate | 0.3333 | 0.3333 |
-| Unsafe rate | 0.0000 | 0.0000 |
-| Mean final reward | 0.6667 | 0.6667 |
-| Amendment recovery rate | 1.0000 | 1.0000 |
+| Metric | Untrained LLM Baseline | Failed LM-GRPO Attempt | Compact RL Policy |
+| --- | ---: | ---: | ---: |
+| Success rate | 0.0000 | 0.3333 | 1.0000 |
+| Unsafe rate | 0.3333 | 0.0000 | 0.0000 |
+| Mean final reward | -0.3667 | 0.6667 | 1.0000 |
+| Amendment recovery rate | 1.0000 | 1.0000 | 1.0000 |
 
-The current checkpoint is an interim local run. The final Colab/HF rerun should replace these artifacts if it creates a clearer reward separation or beats the untrained success rate.
-
-The final HF training job is intentionally gated: it starts the FastAPI environment, waits for `/health == ok`, verifies the seed-44 anchor trajectory, runs a 100-step signal pass, validates trajectory-level reward variance/done rate/JSON validity/clipping/fallback usage/behavior divergence, and only then runs the longer pass.
-
-## 5. Links
-
-- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
-- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
-- **Colab notebook:** [training/phase1_colab.ipynb](training/phase1_colab.ipynb)
-- **Short finals pitch deck:** [docs/ClinicalTrialEnv_Finals_Pitch.pptx](docs/ClinicalTrialEnv_Finals_Pitch.pptx)
+The compact policy is intentionally labeled separately because it is not a generated-language checkpoint. It trains a small Torch action policy directly against the same ClinicalTrialEnv verifier rewards.
 
 ## Run Locally
 
@@ -125,31 +79,34 @@ python -m venv .venv
 .venv/Scripts/python -m uvicorn server.main:app --host 0.0.0.0 --port 7860
 ```
 
-Verify the anchor path before training:
+Verify the anchor path:
 
 ```bash
 .venv/Scripts/python training/verify_task3_anchor.py --env-url http://localhost:7860
 ```
 
-Run Task 3 evaluation and plotting:
+Regenerate the compact policy artifacts:
 
 ```bash
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/base_model_task3_eval.json
+.venv/Scripts/python training/train_task3_policy_gradient.py --seed-start 200 --train-seed-count 50 --eval-seed-start 200 --eval-num-seeds 50 --train-steps 15 --batch-size 50 --learning-rate 0.3 --log-every 1
+.venv/Scripts/python training/validate_training_outputs.py --mode action_policy --train-log artifacts/phase1_pg/train_log_history.json --trained-eval artifacts/eval/policy_gradient_task3_eval.json
+```
+
+Attempt LM-GRPO separately:
+
+```bash
 .venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --task-id task3 --output-dir artifacts/phase1_grpo
-.venv/Scripts/python training/evaluate_models.py --policy local_model --model-name artifacts/phase1_grpo/model --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/trained_task3_eval.json
-.venv/Scripts/python training/plot_results.py
+.venv/Scripts/python training/validate_training_outputs.py --mode lm_grpo --allow-failed --train-log artifacts/phase1_grpo/train_log_history.json --trained-eval artifacts/eval/lm_grpo_task3_eval_failed.json
 ```
 
-Run the staged HF Jobs training flow after authenticating with Hugging Face:
+## Links
 
-```powershell
-hf auth login
-.\training\launch_hf_training_job.ps1
-```
+- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
+- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- **Artifact manifest:** [artifacts/eval/artifact_manifest.json](artifacts/eval/artifact_manifest.json)
+- **Training report:** [TRAINING_REPORT.md](TRAINING_REPORT.md)
 
-The HF job entrypoint is [training/hf_job_entrypoint.py](training/hf_job_entrypoint.py). It refuses to claim improvement if success, reward, and behavior are unchanged.
-
-Validation:
+## Validation
 
 ```bash
 .venv/Scripts/python -m pytest -q

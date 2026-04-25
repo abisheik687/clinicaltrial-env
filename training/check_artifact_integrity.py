@@ -35,15 +35,11 @@ def check_png(path: Path) -> dict[str, Any]:
 
 def check_report(path: Path) -> dict[str, Any]:
     required = [
-        "## 1. Problem",
-        "## 2. Environment",
-        "## 3. Training Setup",
-        "## 4. Baseline vs Trained",
-        "## 5. Reward Curve",
-        "## 6. Quantitative Results",
-        "## 7. Key Learning",
-        "## 8. Why This Matters",
-        "Agent interacts with environment -> receives reward -> updates policy",
+        "## Baseline Failure",
+        "## Evidence Tracks",
+        "## Compact RL Policy",
+        "## LM-GRPO Attempt",
+        "## Final Interpretation",
         "![Training reward curve]",
         "![Held-out comparison]",
     ]
@@ -67,9 +63,11 @@ def main() -> None:
     json_paths = [
         Path("artifacts/eval/baseline_avg_reward.json"),
         Path("artifacts/eval/base_model_task3_eval.json"),
-        Path("artifacts/eval/trained_task3_eval.json"),
+        Path("artifacts/eval/policy_gradient_task3_eval.json"),
+        Path("artifacts/eval/lm_grpo_task3_eval_failed.json"),
         Path("artifacts/eval/before_after_trajectories.json"),
         Path("artifacts/eval/training_validation_summary.json"),
+        Path("artifacts/eval/artifact_manifest.json"),
     ]
     png_paths = [
         Path("artifacts/plots/training_reward_curve.png"),

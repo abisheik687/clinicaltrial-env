@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "artifact_contract": {
+    "policy_type_values": [
+      "untrained_lm",
+      "lm_grpo",
+      "compact_action_policy",
+      "heuristic_reference"
+    ],
+    "validation_status_values": [
+      "passed",
+      "failed",
+      "not_claimed"
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "Untrained LLM baseline",
+      "path": "artifacts/eval/base_model_task3_eval.json",
+      "policy_type": "untrained_lm",
+      "validation_status": "passed",
+      "generation_command": ".venv/Scripts/python training/evaluate_models.py --policy local_model --model-name Qwen/Qwen2.5-0.5B-Instruct --task-ids task3 --num-seeds 3 --seed-start 200 --output artifacts/eval/base_model_task3_eval.json",
+      "seed_range": "200..202",
+      "claim": "Baseline failure evidence only."
+    },
+    {
+      "name": "Failed LM-GRPO attempt",
+      "path": "artifacts/eval/lm_grpo_task3_eval_failed.json",
+      "policy_type": "lm_grpo",
+      "validation_status": "failed",
+      "generation_command": ".venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --task-id task3 --output-dir artifacts/phase1_grpo",
+      "seed_range": "200..202",
+      "claim": "Preserved failed attempt; not claimed as successful LLM training."
+    },
+    {
+      "name": "Compact RL action policy",
+      "path": "artifacts/eval/policy_gradient_task3_eval.json",
+      "policy_type": "compact_action_policy",
+      "validation_status": "passed",
+      "generation_command": ".venv/Scripts/python training/train_task3_policy_gradient.py --seed-start 200 --train-seed-count 50 --eval-seed-start 200 --eval-num-seeds 50 --train-steps 15 --batch-size 50 --learning-rate 0.3 --log-every 1",
+      "train_seed_range": "200..249",
+      "eval_seed_range": "200..249",
+      "claim": "Verifier-trained compact action-policy result; not an LLM-GRPO checkpoint."
+    }
+  ]
+}

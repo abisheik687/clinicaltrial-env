@@ -2,6 +2,7 @@
   "passed": true,
   "seed": 44,
   "max_reward": 1.0,
+  "violations": 0,
   "final_reward": {
     "total_reward": 1.0,
     "terminal_success": true,
@@ -26,6 +27,7 @@
       "criterion_id": "INC-001",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-001 evaluated correctly under the current protocol."
@@ -35,6 +37,7 @@
       "criterion_id": "INC-002",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-002 evaluated correctly under the current protocol."
@@ -44,6 +47,7 @@
       "criterion_id": null,
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Action recorded."
@@ -51,8 +55,9 @@
     {
       "action_type": "evaluate_criterion",
       "criterion_id": "INC-003",
-      "reward": 0.0,
+      "reward": 0.3,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-003 evaluated correctly under the current protocol."
@@ -62,6 +67,7 @@
       "criterion_id": "INC-004",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-004 evaluated correctly under the current protocol."
@@ -71,6 +77,7 @@
       "criterion_id": "INC-005",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-005 evaluated correctly under the current protocol."
@@ -80,6 +87,7 @@
       "criterion_id": "INC-006",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion INC-006 evaluated correctly under the current protocol."
@@ -89,6 +97,7 @@
       "criterion_id": "EXC-001",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion EXC-001 evaluated correctly under the current protocol."
@@ -98,6 +107,7 @@
       "criterion_id": "EXC-002",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion EXC-002 evaluated correctly under the current protocol."
@@ -107,6 +117,7 @@
       "criterion_id": "EXC-003",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion EXC-003 evaluated correctly under the current protocol."
@@ -116,6 +127,7 @@
       "criterion_id": "EXC-004",
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Criterion EXC-004 evaluated correctly under the current protocol."
@@ -125,6 +137,7 @@
       "criterion_id": null,
       "reward": 0.0,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Eligibility decision recorded. Continue with follow-up scheduling."
@@ -132,8 +145,9 @@
     {
       "action_type": "schedule_followup",
       "criterion_id": null,
-      "reward": 0.0,
+      "reward": 0.3,
       "done": false,
+      "invalid_action": false,
       "terminal_success": false,
       "unsafe_action": false,
       "feedback": "Follow-up visit proposed for day 8."
@@ -143,6 +157,7 @@
       "criterion_id": null,
       "reward": 1.0,
       "done": true,
+      "invalid_action": false,
       "terminal_success": true,
       "unsafe_action": false,
       "feedback": "Workflow completed successfully: eligibility, amendment handling, follow-up scheduling, and safety response all matched the verifier."

@@ -449,5 +449,11 @@
         }
       ]
     }
-  ]
+  ],
+  "policy_type": "lm_grpo",
+  "validation_status": "failed",
+  "training_method": "TRL GRPO causal-LM trajectory generation attempt",
+  "eval_seed_start": 200,
+  "eval_num_seeds": 3,
+  "failure_reason": "Preserved LM-GRPO attempt did not pass LLM-specific validation gates; not claimed as successful LLM training."
 }

@@ -294,7 +294,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grpo-epsilon", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-actions", type=int, default=14)
-    parser.add_argument("--max-new-tokens", type=int, default=384)
+    parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument("--collect-debug-rollouts", action="store_true")
     parser.add_argument("--local-debug-mode", action="store_true")
     parser.add_argument("--sft-warmstart-epochs", type=int, default=50)
