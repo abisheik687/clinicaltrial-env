@@ -1,0 +1,77 @@
+{
+  "model_name": "tiny-debug",
+  "task_ids": [
+    "task1"
+  ],
+  "reward_std": 0.916515,
+  "reward_start": -0.6,
+  "reward_end": -0.2,
+  "success_rate_before": 0.3333,
+  "success_rate_after": 0.3333,
+  "mean_reward_before": -0.3333,
+  "mean_reward_after": -0.3333,
+  "unsafe_rate_before": 0.6667,
+  "unsafe_rate_after": 0.6667,
+  "sample_trajectory_diff": {
+    "task_id": "task1",
+    "seed": 1001,
+    "baseline_actions": [
+      {
+        "step": 1,
+        "raw_output": "{\"action_type\":\"evaluate_criterion\",\"criterion_id\":\"INC-001\",\"evaluation\":{\"criterion_id\":\"INC-001\",\"verdict\":\"met\",\"reasoning\":\"Patient age is 40, compared with the 18-75 inclusion range.\"},\"confidence_score\":0.73}",
+        "action": {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 40, compared with the 18-75 inclusion range."
+          },
+          "confidence_score": 0.73
+        },
+        "reward": 0.0,
+        "invalid": false
+      },
+      {
+        "step": 2,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": 1.0,
+        "invalid": false
+      }
+    ],
+    "trained_actions": [
+      {
+        "step": 1,
+        "raw_output": "{\"action_type\":\"evaluate_criterion\",\"criterion_id\":\"INC-001\",\"evaluation\":{\"criterion_id\":\"INC-001\",\"verdict\":\"met\",\"reasoning\":\"Patient age is 40, compared with the 18-75 inclusion range.\"},\"confidence_score\":0.72}",
+        "action": {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 40, compared with the 18-75 inclusion range."
+          },
+          "confidence_score": 0.72
+        },
+        "reward": 0.0,
+        "invalid": false
+      },
+      {
+        "step": 2,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": 1.0,
+        "invalid": false
+      }
+    ]
+  }
+}

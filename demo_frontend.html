@@ -3,1269 +3,794 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClinicalTrialEnv Demo</title>
+  <title>ClinicalTrialEnv Judge Demo</title>
   <style>
     :root {
-      --bg: #f3f7fb;
+      --bg: #f5f7fb;
       --panel: #ffffff;
-      --line: #d9e3ef;
-      --line-strong: #b6c7da;
-      --ink: #18324b;
-      --muted: #5e7288;
-      --accent: #2b6cb0;
-      --accent-soft: #e9f3ff;
-      --good: #dff7e8;
-      --good-ink: #17603a;
-      --warn: #fff6cc;
-      --warn-line: #e0b600;
-      --danger: #fde5e5;
-      --danger-ink: #a12d2d;
-      --neutral: #edf1f6;
-      --shadow: 0 10px 26px rgba(24, 50, 75, 0.08);
+      --line: #d8e0ec;
+      --ink: #17324a;
+      --muted: #627487;
+      --accent: #1e6bb8;
+      --accent-soft: #e9f2ff;
+      --good: #dff6e8;
+      --good-ink: #18633a;
+      --warn: #fff4d6;
+      --warn-ink: #855d00;
+      --bad: #fde7e7;
+      --bad-ink: #a33131;
+      --shadow: 0 12px 28px rgba(23, 50, 74, 0.08);
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-      background: linear-gradient(180deg, #f8fbfe 0%, var(--bg) 100%);
+      background: linear-gradient(180deg, #f9fbfe 0%, var(--bg) 100%);
       color: var(--ink);
     }
+
     .page {
-      max-width: 1600px;
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 20px 24px 28px;
+      padding: 22px;
     }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
+
+    .hero {
+      display: grid;
+      gap: 14px;
       margin-bottom: 18px;
     }
-    .title h1 {
-      margin: 0 0 6px;
-      font-size: 30px;
+
+    .hero-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: var(--shadow);
     }
-    .title p {
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+      line-height: 1.1;
+    }
+
+    .hero p {
       margin: 0;
       color: var(--muted);
-      font-size: 14px;
+      line-height: 1.6;
     }
-    .top-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+
+    .banner {
+      border: 1px solid #f0b8b8;
+      background: linear-gradient(180deg, #fff4f4 0%, #feeaea 100%);
+      color: var(--bad-ink);
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-weight: 700;
+      box-shadow: var(--shadow);
     }
-    .layout {
+
+    .summary-grid {
       display: grid;
-      grid-template-columns: 1.1fr 1.1fr 1.25fr;
-      gap: 18px;
-      align-items: start;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
     }
-    .panel {
+
+    .summary-card {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 18px;
+      padding: 18px;
       box-shadow: var(--shadow);
-      min-height: 760px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
     }
-    .panel.protocol.amendment {
-      border: 2px solid var(--warn-line);
-      box-shadow: 0 0 0 4px rgba(224, 182, 0, 0.15), var(--shadow);
+
+    .summary-card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
     }
-    .panel-header {
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid var(--line);
-      background: linear-gradient(180deg, #fcfdff 0%, #f7fafe 100%);
-    }
-    .panel-header h2 {
-      margin: 0 0 6px;
-      font-size: 20px;
-    }
-    .panel-header p {
-      margin: 0;
+
+    .summary-card p {
+      margin: 0 0 12px;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.5;
     }
-    .panel-body {
-      padding: 16px 18px 18px;
-      overflow: auto;
-      flex: 1;
-    }
-    .meta-grid {
+
+    .metric-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      margin-bottom: 14px;
     }
-    .meta-card {
+
+    .metric {
       border: 1px solid var(--line);
-      background: #fbfdff;
       border-radius: 14px;
       padding: 12px;
+      background: #fbfdff;
     }
-    .meta-label {
-      display: block;
+
+    .metric-label {
       color: var(--muted);
       font-size: 12px;
-      margin-bottom: 6px;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      margin-bottom: 6px;
     }
-    .meta-value {
-      font-size: 16px;
-      font-weight: 600;
-    }
-    .section {
-      margin-top: 18px;
-    }
-    .section h3 {
-      margin: 0 0 10px;
-      font-size: 15px;
-    }
-    .list {
-      display: grid;
-      gap: 10px;
-    }
-    .item {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      background: #fff;
-    }
-    .item.flagged {
-      border-color: #f2be68;
-      background: #fff8ea;
-    }
-    .item strong {
-      display: block;
-      margin-bottom: 4px;
-    }
-    .subtle {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
+
+    .metric-value {
+      font-size: 22px;
       font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      margin-right: 6px;
-      margin-top: 6px;
     }
-    .badge.info {
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-    .badge.warn {
-      background: #fff1c2;
-      color: #936700;
-    }
-    .badge.bad {
-      background: #fde5e5;
-      color: var(--danger-ink);
-    }
-    .criterion {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      background: #fff;
-      margin-bottom: 10px;
-    }
-    .criterion p {
-      margin: 6px 0 0;
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--muted);
-    }
-    .warning-box {
-      margin-top: 14px;
-      border: 2px solid var(--warn-line);
-      border-radius: 14px;
-      background: var(--warn);
-      padding: 14px;
-      color: #6f5700;
-      font-weight: 600;
-      line-height: 1.5;
-    }
-    .controls {
-      display: grid;
-      gap: 12px;
-    }
-    .button-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    .metric-value.good { color: var(--good-ink); }
+    .metric-value.bad { color: var(--bad-ink); }
+    .metric-value.warn { color: var(--warn-ink); }
+
+    .tabs {
+      display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0 14px;
     }
-    button {
-      border: 1px solid var(--line-strong);
-      background: #fff;
-      color: var(--ink);
-      border-radius: 12px;
-      padding: 11px 12px;
-      font-weight: 600;
+
+    .tab-button {
+      border: 1px solid #bfd0e4;
+      background: #f6faff;
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
       cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
     }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(24, 50, 75, 0.08);
-      border-color: #90b4d7;
-    }
-    button.primary {
+
+    .tab-button.active {
       background: var(--accent);
       color: #fff;
       border-color: var(--accent);
     }
-    button.danger {
-      background: #fff4f4;
-      border-color: #efc1c1;
-      color: #8d2f2f;
+
+    .tab-panel {
+      display: none;
+      gap: 16px;
     }
-    button.ghost {
-      background: #f7fbff;
-      color: var(--accent);
-      border-color: #bfd4ee;
-    }
-    select, textarea, input {
-      width: 100%;
-      border: 1px solid var(--line-strong);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font: inherit;
-      color: var(--ink);
-      background: #fff;
-    }
-    textarea {
-      min-height: 76px;
-      resize: vertical;
-    }
-    .control-group label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .status-box {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      background: #fbfdff;
-      margin-bottom: 14px;
-    }
-    .guide-box {
-      border: 1px solid #bfd4ee;
-      border-radius: 14px;
-      padding: 14px;
-      background: #f7fbff;
-      margin-bottom: 14px;
-    }
-    .guide-box h3 {
-      margin: 0 0 6px;
-      font-size: 15px;
-    }
-    .guide-callout {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid var(--line);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .guide-steps {
+
+    .tab-panel.active {
       display: grid;
-      gap: 8px;
-      margin-top: 12px;
     }
-    .guide-step {
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 9px 10px;
-      background: #fff;
-      font-size: 13px;
-      line-height: 1.5;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
     }
-    .guide-step.current {
-      border-color: #90b4d7;
-      background: #eef6ff;
+
+    .panel h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
     }
-    .guide-step strong {
-      display: inline;
-      margin-right: 6px;
-    }
-    .guide-meta {
+
+    .panel .subtitle {
+      margin: 0 0 14px;
       color: var(--muted);
-      font-size: 12px;
-      margin-top: 8px;
+      font-size: 14px;
       line-height: 1.5;
     }
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
       font-size: 14px;
     }
-    .status-row:last-child {
-      margin-bottom: 0;
+
+    .table th,
+    .table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
     }
-    .log {
+
+    .table th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .trajectory {
       display: grid;
       gap: 10px;
-      max-height: 360px;
-      overflow: auto;
     }
-    .log-entry {
+
+    .step-card {
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 12px;
-      background: #fff;
+      background: #fcfdff;
     }
-    .log-top {
+
+    .step-head {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 6px;
       align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
     }
-    .reward-pill {
+
+    .step-title {
+      font-weight: 700;
+    }
+
+    .pill {
       border-radius: 999px;
       padding: 4px 8px;
       font-size: 12px;
       font-weight: 700;
-      background: var(--accent-soft);
-      color: var(--accent);
     }
-    .banner {
-      margin-top: 14px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      font-weight: 700;
-      display: none;
+
+    .pill.good { background: var(--good); color: var(--good-ink); }
+    .pill.bad { background: var(--bad); color: var(--bad-ink); }
+    .pill.warn { background: var(--warn); color: var(--warn-ink); }
+    .pill.info { background: var(--accent-soft); color: var(--accent); }
+
+    .step-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
     }
-    .banner.show {
-      display: block;
-    }
-    .banner.correct {
-      background: var(--good);
-      color: var(--good-ink);
-      border: 1px solid #abd8bf;
-    }
-    .banner.unsafe {
-      background: var(--danger);
-      color: var(--danger-ink);
-      border: 1px solid #e1aaaa;
-    }
-    .banner.incorrect {
-      background: var(--neutral);
-      color: #4b5d70;
-      border: 1px solid #cad6e1;
-    }
-    .muted-note {
+
+    .step-detail {
       color: var(--muted);
-      font-size: 12px;
       line-height: 1.5;
-      margin-top: 8px;
+      font-size: 13px;
     }
-    .footer-note {
+
+    .bars {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #edf2f8;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4b9aff 0%, #1e6bb8 100%);
+    }
+
+    .bar-fill.good {
+      background: linear-gradient(90deg, #64c98a 0%, #238a4f 100%);
+    }
+
+    .bar-fill.bad {
+      background: linear-gradient(90deg, #f28787 0%, #c64e4e 100%);
+    }
+
+    .safety-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
       margin-top: 10px;
-      font-size: 12px;
+    }
+
+    .safety-stage {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: #fbfdff;
+      min-height: 94px;
+    }
+
+    .safety-stage.active-good {
+      border-color: #9fd5b2;
+      background: #f2fbf5;
+    }
+
+    .safety-stage.active-bad {
+      border-color: #efb4b4;
+      background: #fff3f3;
+    }
+
+    .callout {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fbfdff;
+      line-height: 1.6;
       color: var(--muted);
     }
-    .proof-strip {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    .proof-card {
+
+    .code-block {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #fbfdff;
-      padding: 12px;
+      background: #0f1b2a;
+      color: #d9e5f5;
+      border-radius: 16px;
+      padding: 14px;
+      overflow: auto;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
     }
-    .proof-card strong {
-      display: block;
-      margin-bottom: 5px;
+
+    .comparison-table td:nth-child(2),
+    .comparison-table td:nth-child(3),
+    .comparison-table td:nth-child(4) {
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1100px) {
+      .summary-grid,
+      .two-col,
+      .safety-strip,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="topbar">
-      <div class="title">
-        <h1>Clinical Trial Operations Arena</h1>
-        <p>Interactive demo for the AI training environment. Fixed to Task 3 with seed 44 so the full screening, scheduling, and safety workflow stays reproducible for mentor and judge walkthroughs.</p>
+    <section class="hero">
+      <div class="hero-card">
+        <h1>ClinicalTrialEnv: Before vs After Behavior</h1>
+        <p>
+          Task 3 is a stateful Rett syndrome workflow: screening, protocol amendment, re-check, decision,
+          scheduling, and safety-event handling. This page shows what failed, what was learned, and what actually works.
+        </p>
       </div>
-      <div class="top-actions">
-        <button class="ghost" id="resetButton">Reset Demo Episode</button>
-      </div>
-    </div>
+      <div class="banner" id="warningBanner"></div>
+    </section>
 
-    <div class="layout">
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Patient Record</h2>
-          <p>Visible patient evidence the agent can use right now.</p>
-        </div>
-        <div class="panel-body" id="patientPanel">
-          <div class="item">
-            <strong>Seed-44 finals case ready</strong>
-            <div class="subtle">Rett syndrome screening case with amendment, follow-up scheduling, and a seizure-symptom safety event.</div>
-            <div class="muted-note">The live state will load automatically; the cached success path is available if the model output is unavailable.</div>
-          </div>
-        </div>
-      </section>
+    <section class="summary-grid" id="summaryGrid"></section>
 
-      <section class="panel protocol" id="protocolPanel">
-        <div class="panel-header">
-          <h2>Protocol Rules</h2>
-          <p>Inclusion, exclusion, protocol version, and amendment state.</p>
-        </div>
-        <div class="panel-body" id="protocolBody">
-          <div class="item">
-            <strong>Correct path preview</strong>
-            <div class="subtle">Re-check INC-003 after amendment, enroll safely, schedule follow-up on day 8, then escalate the safety event.</div>
-          </div>
-        </div>
-      </section>
+    <nav class="tabs">
+      <button class="tab-button active" data-tab="baseline">Baseline run</button>
+      <button class="tab-button" data-tab="compact">Compact policy run</button>
+      <button class="tab-button" data-tab="explanation">Explanation</button>
+    </nav>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Action Console</h2>
-          <p>Drive the environment step by step and watch the verifier rewards.</p>
-        </div>
-        <div class="panel-body">
-          <div class="status-box">
-            <div class="status-row"><span>Session</span><strong id="sessionId">Not started</strong></div>
-            <div class="status-row"><span>Total reward</span><strong id="totalReward">0.00</strong></div>
-            <div class="status-row"><span>Episode status</span><strong id="episodeStatus">Loading</strong></div>
-            <div class="status-row"><span>Current step</span><strong id="stepMeta">0 / 20</strong></div>
-          </div>
+    <section class="tab-panel active" id="tab-baseline"></section>
+    <section class="tab-panel" id="tab-compact"></section>
+    <section class="tab-panel" id="tab-explanation"></section>
 
-          <div class="guide-box">
-            <div class="proof-strip">
-              <div class="proof-card">
-                <strong>Untrained Model</strong>
-                <div class="subtle">Often stops at screening or misses the operations steps.</div>
-              </div>
-              <div class="proof-card">
-                <strong>RL-Trained Model</strong>
-                <div class="subtle">Cached success replay completes the verifier path every time.</div>
-              </div>
-            </div>
-            <div class="status-row" style="margin-bottom: 10px;">
-              <h3 style="margin: 0;">Guided Demo</h3>
-              <button class="ghost" id="playGuidedDemoButton" type="button">Play Guided Demo</button>
-            </div>
-            <div id="guidedSummary" class="subtle">Loading the fixed seed-44 walkthrough.</div>
-            <div id="guidedNextAction" class="guide-callout">The demo will tell the judge what to click next and why it matters.</div>
-            <div id="guidedSteps" class="guide-steps"></div>
-            <div class="guide-meta">Correct path: safe enroll, schedule day 8, then escalate the seizure-symptom event.</div>
-          </div>
-
-          <div class="controls">
-            <div class="button-grid">
-              <button id="inspectPatientButton">Inspect Patient</button>
-              <button id="inspectProtocolButton">Inspect Protocol</button>
-              <button class="primary" id="evaluateButton">Evaluate Criterion</button>
-              <button id="clarifyButton">Request Clarification</button>
-              <button class="primary" id="enrollButton">Enroll</button>
-              <button class="danger" id="excludeButton">Exclude</button>
-              <button class="ghost" id="scheduleFollowupButton">Schedule Follow-Up</button>
-              <button class="ghost" id="handleSafetyButton">Handle Safety Event</button>
-              <button id="deferButton">Defer</button>
-            </div>
-
-            <div class="control-group">
-              <label for="criterionSelect">Criterion</label>
-              <select id="criterionSelect"></select>
-            </div>
-
-            <div class="control-group">
-              <label for="verdictSelect">Verdict</label>
-              <select id="verdictSelect">
-                <option value="met">met</option>
-                <option value="not_met">not_met</option>
-                <option value="uncertain">uncertain</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label for="clarificationSelect">Clarification target</label>
-              <select id="clarificationSelect"></select>
-            </div>
-
-            <div class="control-group">
-              <label for="followupDayInput">Follow-up day</label>
-              <input id="followupDayInput" type="number" min="1" max="30" value="8">
-            </div>
-
-            <div class="control-group">
-              <label for="safetyResponseSelect">Safety response</label>
-              <select id="safetyResponseSelect">
-                <option value="escalate">escalate</option>
-                <option value="reschedule">reschedule</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label for="rescheduleDayInput">Reschedule day</label>
-              <input id="rescheduleDayInput" type="number" min="1" max="30" value="9">
-            </div>
-
-            <div class="control-group">
-              <label for="reasoningInput">Reasoning / decision note</label>
-              <textarea id="reasoningInput">Patient age is within the permitted range based on the visible demographics.</textarea>
-            </div>
-          </div>
-
-          <div class="section">
-            <h3>Action Log</h3>
-            <div class="log" id="actionLog"></div>
-          </div>
-
-          <div id="finalBanner" class="banner"></div>
-          <div class="footer-note">API calls use the current site origin automatically, so the same demo works locally and on Hugging Face Spaces.</div>
-        </div>
-      </section>
+    <div class="footer-note">
+      Live API endpoints remain available at <code>/reset</code>, <code>/step</code>, <code>/state</code>, and <code>/health</code>.
+      This dashboard is a judge-facing evidence view built from repository evaluation artifacts.
     </div>
   </div>
 
   <script>
-    // Use same-origin API calls so the demo works both locally and when served from Hugging Face Spaces.
-    const API_BASE_URL = window.location.origin;
-    const DEMO_TASK_ID = 'task3';
-    const DEMO_SEED = 44;
-
-    let sessionId = null;
-    let currentObservation = null;
-    let totalReward = 0;
-    let done = false;
-    let actionCount = 0;
-    let cachedFallbackUsed = false;
-
-    const patientPanel = document.getElementById('patientPanel');
-    const protocolPanel = document.getElementById('protocolPanel');
-    const protocolBody = document.getElementById('protocolBody');
-    const actionLog = document.getElementById('actionLog');
-    const finalBanner = document.getElementById('finalBanner');
-    const sessionIdEl = document.getElementById('sessionId');
-    const totalRewardEl = document.getElementById('totalReward');
-    const episodeStatusEl = document.getElementById('episodeStatus');
-    const stepMetaEl = document.getElementById('stepMeta');
-    const guidedSummaryEl = document.getElementById('guidedSummary');
-    const guidedNextActionEl = document.getElementById('guidedNextAction');
-    const guidedStepsEl = document.getElementById('guidedSteps');
-    const criterionSelect = document.getElementById('criterionSelect');
-    const clarificationSelect = document.getElementById('clarificationSelect');
-    const verdictSelect = document.getElementById('verdictSelect');
-    const followupDayInput = document.getElementById('followupDayInput');
-    const safetyResponseSelect = document.getElementById('safetyResponseSelect');
-    const rescheduleDayInput = document.getElementById('rescheduleDayInput');
-    const reasoningInput = document.getElementById('reasoningInput');
-    const playGuidedDemoButton = document.getElementById('playGuidedDemoButton');
-    let guidedDemoRunning = false;
+    const APP_DATA = __CLINICALTRIALENV_DATA__;
 
     function escapeHtml(value) {
-      return String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;');
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
     }
 
-    function formatNumber(value) {
-      return Number(value).toFixed(2);
+    function formatMetric(value) {
+      if (typeof value !== "number" || Number.isNaN(value)) {
+        return "n/a";
+      }
+      return value.toFixed(2);
     }
 
-    function logEntry(title, rewardValue, detail, feedback) {
-      actionCount += 1;
-      const wrapper = document.createElement('div');
-      wrapper.className = 'log-entry';
-      wrapper.innerHTML = `
-        <div class="log-top">
-          <strong>${escapeHtml(actionCount + '. ' + title)}</strong>
-          <span class="reward-pill">Reward ${formatNumber(rewardValue)}</span>
-        </div>
-        <div class="subtle">${escapeHtml(detail)}</div>
-        <div class="muted-note">${escapeHtml(feedback || '')}</div>
-      `;
-      actionLog.prepend(wrapper);
+    function metricTone(value, positive = true) {
+      if (typeof value !== "number") return "";
+      if (positive) {
+        if (value >= 0.9) return "good";
+        if (value <= 0.1) return "bad";
+        return "warn";
+      }
+      if (value <= 0.05) return "good";
+      if (value >= 0.3) return "bad";
+      return "warn";
     }
 
-    function renderCachedSuccessPreview(reason) {
-      cachedFallbackUsed = true;
-      done = true;
-      totalReward = 1.0;
-      sessionIdEl.textContent = 'cached seed-44 replay';
-      totalRewardEl.textContent = '1.00';
-      episodeStatusEl.textContent = 'Completed';
-      stepMetaEl.textContent = '14 / 14';
-      patientPanel.innerHTML = `
-        <div class="item">
-          <strong>RL-Trained Model cached success replay</strong>
-          <div class="subtle">The live model/API path was unavailable, so the demo is showing the verified seed-44 success trajectory.</div>
-          <div class="muted-note">${escapeHtml(reason || 'Cached replay used to keep the judge demo unbreakable.')}</div>
-        </div>
-        <div class="section">
-          <h3>Successful Operations Path</h3>
-          <div class="list">
-            <div class="item"><strong>Amendment</strong><div class="subtle">INC-003 re-checked under the amended severity range.</div></div>
-            <div class="item"><strong>Enrollment</strong><div class="subtle">Patient safely enrolled after all inclusion and exclusion checks.</div></div>
-            <div class="item"><strong>Follow-up</strong><div class="subtle">Visit scheduled on day 8 inside the day 7 to 10 window.</div></div>
-            <div class="item flagged"><strong>Safety Event</strong><div class="subtle">New seizure symptoms escalated to the investigator.</div></div>
-          </div>
-        </div>
-      `;
-      protocolPanel.classList.add('amendment');
-      protocolBody.innerHTML = `
-        <div class="warning-box">Amendment handled: INC-003 was re-checked before enrollment.</div>
-        <div class="section">
-          <h3>Verifier Result</h3>
-          <div class="list">
-            <div class="item"><strong>Eligibility</strong><span class="badge info">passed</span></div>
-            <div class="item"><strong>Amendment recovery</strong><span class="badge info">passed</span></div>
-            <div class="item"><strong>Scheduling</strong><span class="badge info">day 8 passed</span></div>
-            <div class="item"><strong>Safety</strong><span class="badge info">escalation passed</span></div>
-          </div>
-        </div>
-      `;
-      guidedSummaryEl.textContent = 'Cached RL-Trained Model replay completed successfully.';
-      guidedNextActionEl.textContent = 'Point judges to the verifier result: reward 1.00, safe enrollment, day-8 follow-up, and investigator escalation.';
-      guidedStepsEl.innerHTML = `
-        <div class="guide-step current"><strong>1.</strong>Untrained Model baseline<div class="muted-note">Baseline comparison is shown in the README plots.</div></div>
-        <div class="guide-step current"><strong>2.</strong>RL-Trained Model replay<div class="muted-note">Correct path is guaranteed even if live generation is unavailable.</div></div>
-      `;
-      finalBanner.className = 'banner show correct';
-      finalBanner.textContent = 'Correct safe final outcome. Reward 1.00. Cached replay shows the verified RL-Trained Model success path.';
-      logEntry('Cached RL-Trained Model replay', 1.0, 'Fallback replay guaranteed a successful judge demo.', reason || 'Live replay fallback activated.');
+    function findRewardTrace(length, terminalReward) {
+      const values = new Array(length).fill(null);
+      if (length > 0) {
+        values[length - 1] = terminalReward;
+      }
+      return values;
     }
 
-    function renderPatient(observation) {
-      const operationalState = observation.operational_state || null;
-      const labs = Object.entries(observation.lab_values).map(([name, lab]) => {
-        const badges = [];
-        if (lab.certainty !== 'confirmed') badges.push(`<span class="badge warn">${escapeHtml(lab.certainty)}</span>`);
-        if (lab.is_abnormal) badges.push('<span class="badge bad">flagged</span>');
-        return `
-          <div class="item ${lab.is_abnormal || lab.certainty !== 'confirmed' ? 'flagged' : ''}">
-            <strong>${escapeHtml(name)}</strong>
-            <div>${escapeHtml(lab.value)} ${escapeHtml(lab.unit)}</div>
-            <div class="subtle">Reference ${escapeHtml(lab.reference_range[0])} to ${escapeHtml(lab.reference_range[1])}</div>
-            ${badges.join('')}
-          </div>
-        `;
-      }).join('');
+    function renderSummary() {
+      const baseline = APP_DATA.baseline.aggregate || {};
+      const compact = APP_DATA.compact_policy.aggregate || {};
+      const lmSummary = APP_DATA.lm_grpo.summary || {};
+      document.getElementById("warningBanner").textContent = APP_DATA.banner;
 
-      const medications = observation.current_medications.map((med) => `
-        <div class="item ${med.is_contraindicated ? 'flagged' : ''}">
-          <strong>${escapeHtml(med.name)}</strong>
-          <div>${escapeHtml(med.dose_mg)} mg · ${escapeHtml(med.frequency)}</div>
-          ${med.is_contraindicated === true ? '<span class="badge bad">contraindicated</span>' : ''}
-        </div>
-      `).join('');
-
-      const operationsPanel = operationalState ? `
-        <div class="section">
-          <h3>Operations State</h3>
-          <div class="list">
-            <div class="item">
-              <strong>Workflow phase</strong>
-              <div>${escapeHtml(operationalState.workflow_phase)}</div>
-              ${operationalState.amendment_review_required ? '<span class="badge warn">amendment re-check required</span>' : ''}
-              ${operationalState.safety_event_active ? '<span class="badge bad">safety event active</span>' : ''}
-            </div>
-            <div class="item">
-              <strong>Follow-up window</strong>
-              <div>Day ${escapeHtml(operationalState.followup_window_start ?? '—')} to ${escapeHtml(operationalState.followup_window_end ?? '—')}</div>
-              <div class="subtle">Scheduled day: ${escapeHtml(operationalState.scheduled_followup_day ?? 'not scheduled')}</div>
-            </div>
-            <div class="item ${operationalState.safety_event_active ? 'flagged' : ''}">
-              <strong>Safety event</strong>
-              <div class="subtle">${escapeHtml(operationalState.safety_event_description || 'No active safety event.')}</div>
-              <div class="muted-note">Required response: ${escapeHtml(operationalState.required_safety_action || 'n/a')}</div>
-              <div class="muted-note">Recorded response: ${escapeHtml(operationalState.safety_response || 'none')}</div>
-            </div>
-          </div>
-        </div>
-      ` : '';
-
-      patientPanel.innerHTML = `
-        <div class="meta-grid">
-          <div class="meta-card">
-            <span class="meta-label">Patient ID</span>
-            <div class="meta-value">${escapeHtml(observation.patient_id.slice(0, 8))}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Diagnosis</span>
-            <div class="meta-value">${escapeHtml(observation.diagnosis.primary_condition)}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Age / Sex</span>
-            <div class="meta-value">${escapeHtml(observation.demographics.age)} · ${escapeHtml(observation.demographics.sex)}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">BMI</span>
-            <div class="meta-value">${escapeHtml(observation.demographics.bmi)}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <h3>Case Snapshot</h3>
-          <div class="item">
-            <strong>${escapeHtml(observation.diagnosis.primary_condition)}</strong>
-            <div class="subtle">ICD-10 ${escapeHtml(observation.diagnosis.icd10_code)} · diagnosed ${escapeHtml(observation.diagnosis.diagnosis_date)}</div>
-            <div class="muted-note">${escapeHtml(observation.info_message || 'No active note.')}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <h3>Lab Values</h3>
-          <div class="list">${labs}</div>
-        </div>
-
-        <div class="section">
-          <h3>Medication List</h3>
-          <div class="list">${medications || '<div class="subtle">No active medications listed.</div>'}</div>
-        </div>
-
-        ${operationsPanel}
-      `;
-    }
-
-    function renderProtocol(observation) {
-      const protocol = observation.trial_protocol_summary;
-      const renderCriteria = (criteria, title) => `
-        <div class="section">
-          <h3>${escapeHtml(title)}</h3>
-          ${criteria.map((criterion) => `
-            <div class="criterion">
-              <strong>${escapeHtml(criterion.criterion_id)}</strong>
-              ${criterion.is_ambiguous ? '<span class="badge warn">ambiguous</span>' : '<span class="badge info">clear</span>'}
-              ${criterion.clarification_available ? '<span class="badge info">clarifiable</span>' : ''}
-              <p>${escapeHtml(criterion.description)}</p>
-            </div>
-          `).join('')}
-        </div>
-      `;
-
-      protocolPanel.classList.toggle('amendment', Boolean(protocol.amendment_active));
-      protocolBody.innerHTML = `
-        <div class="meta-grid">
-          <div class="meta-card">
-            <span class="meta-label">Trial</span>
-            <div class="meta-value">${escapeHtml(protocol.trial_id)}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Phase</span>
-            <div class="meta-value">${escapeHtml(protocol.phase)}</div>
-          </div>
-          <div class="meta-card" style="grid-column: 1 / -1;">
-            <span class="meta-label">Protocol title</span>
-            <div class="meta-value">${escapeHtml(protocol.title)}</div>
-          </div>
-        </div>
-        ${protocol.amendment_active ? `<div class="warning-box">Amendment fired: ${escapeHtml(protocol.amendment_description || 'Protocol change detected.')}</div>` : ''}
-        ${renderCriteria(protocol.inclusion_criteria, 'Inclusion Criteria')}
-        ${renderCriteria(protocol.exclusion_criteria, 'Exclusion Criteria')}
-      `;
-    }
-
-    function populateSelectors(observation) {
-      const protocol = observation.trial_protocol_summary;
-      const criteria = [...protocol.inclusion_criteria, ...protocol.exclusion_criteria];
-      const criterionOptions = criteria.map((criterion) => `<option value="${escapeHtml(criterion.criterion_id)}">${escapeHtml(criterion.criterion_id)} — ${escapeHtml(criterion.description)}</option>`).join('');
-      const clarificationOptions = criteria
-        .filter((criterion) => criterion.clarification_available)
-        .map((criterion) => `<option value="${escapeHtml(criterion.criterion_id)}">${escapeHtml(criterion.criterion_id)} — clarification</option>`)
-        .join('');
-
-      criterionSelect.innerHTML = criterionOptions;
-      clarificationSelect.innerHTML = clarificationOptions || '<option value="">No clarifiable criteria available</option>';
-    }
-
-    function renderStatus(observation) {
-      sessionIdEl.textContent = sessionId || 'Not started';
-      totalRewardEl.textContent = formatNumber(totalReward);
-      episodeStatusEl.textContent = done ? 'Completed' : 'In progress';
-      stepMetaEl.textContent = `${observation.step_number} / ${observation.step_number + observation.steps_remaining}`;
-    }
-
-    function getGuideData(observation) {
-      const operationalState = observation?.operational_state || {};
-      const amendmentActive = Boolean(observation?.trial_protocol_summary?.amendment_active);
-      const phase = operationalState.workflow_phase || 'screening';
-      const steps = [
+      const cards = [
         {
-          key: 'screening',
-          title: 'Screen the patient',
-          detail: 'Evaluate INC-001 and INC-002 as met, then resolve INC-003 so the workflow can progress.',
+          title: "Baseline LM",
+          description: "Untrained language model on Task 3. It can begin screening but does not carry the workflow safely to completion.",
+          metrics: [
+            ["Success", baseline.success_rate, true],
+            ["Unsafe", baseline.unsafe_rate, false],
+            ["Reward", baseline.mean_final_reward, true],
+          ],
         },
         {
-          key: 'amendment',
-          title: 'Handle the amendment',
-          detail: 'Once the amendment appears, re-check INC-003 under the updated protocol rule.',
+          title: "LM-GRPO attempt",
+          description: "Training pipeline repaired enough to produce signal, but it still failed validation and did not become stable enough for final use.",
+          metrics: [
+            ["Validation", lmSummary.passed === false ? 0 : 1, false],
+            ["Reward std gate", lmSummary.gates?.trajectory_reward_std_positive ? 1 : 0, true],
+            ["Done rate", lmSummary.episode_done_rate ?? 0, true],
+          ],
         },
         {
-          key: 'followup_scheduling',
-          title: 'Schedule the follow-up',
-          detail: 'After a safe enroll, schedule the follow-up visit on day 8 inside the day 7 to 10 window.',
-        },
-        {
-          key: 'safety_event',
-          title: 'Respond to the safety event',
-          detail: 'When the seizure-symptom alert appears, escalate to the investigator.',
+          title: "Compact RL policy",
+          description: "A direct action policy trained against the same reward function. This is the working proof that the environment is learnable.",
+          metrics: [
+            ["Success", compact.success_rate, true],
+            ["Unsafe", compact.unsafe_rate, false],
+            ["Reward", compact.mean_final_reward, true],
+          ],
         },
       ];
 
-      let currentKey = 'screening';
-      let summary = 'Seed 44 demonstrates the full finals workflow in one bounded episode.';
-      let nextAction = 'Start by evaluating INC-001 as met, then INC-002 as met.';
-
-      if (done) {
-        currentKey = 'complete';
-        summary = 'The walkthrough is complete. Reset or replay it for your next judge or mentor demo.';
-        nextAction = 'Point out the final banner, the total reward, and the recorded safety response.';
-      } else if (phase === 'safety_event' && operationalState.safety_event_active) {
-        currentKey = 'safety_event';
-        summary = 'The workflow is now in the safety phase with a judge-visible seizure-symptom event.';
-        nextAction = 'Click Handle Safety Event with `escalate` to complete the correct path.';
-      } else if (phase === 'followup_scheduling') {
-        currentKey = 'followup_scheduling';
-        summary = 'Screening is complete and the patient is provisionally enrolled.';
-        nextAction = 'Click Schedule Follow-Up and keep the visit on day 8.';
-      } else if (amendmentActive && operationalState.amendment_review_required) {
-        currentKey = 'amendment';
-        summary = 'The amendment has fired and judges should see the protocol panel highlight.';
-        nextAction = 'Re-evaluate INC-003 as `met` to show that the agent noticed the protocol change.';
-      } else if (amendmentActive) {
-        currentKey = 'screening';
-        summary = 'The amendment is active but the workflow is still in screening.';
-        nextAction = 'Finish the remaining criteria, then click Enroll to continue to scheduling.';
-      }
-
-      return { steps, currentKey, summary, nextAction };
+      document.getElementById("summaryGrid").innerHTML = cards.map((card) => `
+        <article class="summary-card">
+          <h2>${escapeHtml(card.title)}</h2>
+          <p>${escapeHtml(card.description)}</p>
+          <div class="metric-grid">
+            ${card.metrics.map(([label, value, positive]) => `
+              <div class="metric">
+                <div class="metric-label">${escapeHtml(label)}</div>
+                <div class="metric-value ${metricTone(typeof value === "number" ? value : null, positive)}">
+                  ${typeof value === "number" ? formatMetric(value) : escapeHtml(String(value))}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </article>
+      `).join("");
     }
 
-    function renderGuidedDemo(observation) {
-      if (!observation) {
-        guidedSummaryEl.textContent = 'Loading the fixed seed-44 walkthrough.';
-        guidedNextActionEl.textContent = 'The demo will tell the judge what to click next and why it matters.';
-        guidedStepsEl.innerHTML = '';
-        return;
-      }
+    function renderMetricTable(aggregate) {
+      const rows = [
+        ["Success rate", aggregate.success_rate],
+        ["Unsafe rate", aggregate.unsafe_rate],
+        ["Mean final reward", aggregate.mean_final_reward],
+        ["Amendment recovery", aggregate.amendment_recovery_rate],
+        ["Eligibility component", aggregate.eligibility_component_score],
+        ["Amendment component", aggregate.amendment_component_score],
+        ["Scheduling component", aggregate.scheduling_component_score],
+        ["Safety component", aggregate.safety_component_score],
+      ];
+      return `
+        <table class="table">
+          <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+          <tbody>
+            ${rows.map(([label, value]) => `
+              <tr>
+                <td>${escapeHtml(label)}</td>
+                <td>${formatMetric(value)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
 
-      const guide = getGuideData(observation);
-      guidedSummaryEl.textContent = guide.summary;
-      guidedNextActionEl.textContent = guide.nextAction;
-      guidedStepsEl.innerHTML = guide.steps.map((step, index) => `
-        <div class="guide-step ${step.key === guide.currentKey ? 'current' : ''}">
-          <strong>${index + 1}.</strong>${escapeHtml(step.title)}<div class="muted-note">${escapeHtml(step.detail)}</div>
+    function renderTrajectory(episode, rewardTrace, mode) {
+      const trace = Array.isArray(rewardTrace) && rewardTrace.length ? rewardTrace : findRewardTrace(episode.trajectory.length, episode.final_reward);
+      return `
+        <div class="trajectory">
+          ${episode.trajectory.map((action, index) => {
+            const reward = trace[index];
+            const title = action.action_type || "unknown";
+            const detail = action.evaluation?.reasoning
+              || action.final_decision_reason
+              || action.safety_response
+              || action.clarification_target
+              || action.followup_day
+              || "";
+            const meta = [];
+            if (action.criterion_id) meta.push(`criterion ${action.criterion_id}`);
+            if (action.followup_day != null) meta.push(`day ${action.followup_day}`);
+            if (action.safety_response) meta.push(`response ${action.safety_response}`);
+            if (action.confidence_score != null) meta.push(`confidence ${Number(action.confidence_score).toFixed(2)}`);
+            return `
+              <div class="step-card">
+                <div class="step-head">
+                  <div class="step-title">Step ${index + 1}: ${escapeHtml(title)}</div>
+                  <span class="pill ${mode === "good" ? "good" : mode === "bad" ? "bad" : "info"}">
+                    reward ${reward == null ? "n/a" : formatMetric(Number(reward))}
+                  </span>
+                </div>
+                <div class="step-detail">${escapeHtml(String(detail || "No extra explanation recorded."))}</div>
+                <div class="step-meta">
+                  ${meta.map((item) => `<span class="pill info">${escapeHtml(item)}</span>`).join("")}
+                </div>
+              </div>
+            `;
+          }).join("")}
         </div>
-      `).join('');
+      `;
     }
 
-    function setLoadingState(message) {
-      patientPanel.innerHTML = `<div class="item"><strong>Loading demo</strong><div class="muted-note">${escapeHtml(message)}</div></div>`;
-      protocolBody.innerHTML = `<div class="item"><strong>Loading protocol</strong><div class="muted-note">${escapeHtml(message)}</div></div>`;
-      guidedSummaryEl.textContent = message;
-      guidedNextActionEl.textContent = 'If the reset fails, use the Reset Demo Episode button to retry.';
-      guidedStepsEl.innerHTML = '';
+    function renderRewardBreakdown(metrics, titleTone) {
+      const rows = [
+        ["Eligibility", metrics.eligibility_component_score],
+        ["Amendment recovery", metrics.amendment_component_score ?? metrics.amendment_recovery_rate],
+        ["Scheduling", metrics.scheduling_component_score],
+        ["Safety", metrics.safety_component_score],
+        ["Unsafe action rate", metrics.unsafe_action_rate ?? 0],
+      ];
+      return `
+        <div class="bars">
+          ${rows.map(([label, rawValue]) => {
+            const numeric = typeof rawValue === "number" ? rawValue : 0;
+            const normalized = Math.max(0, Math.min(1, (numeric + 1) / 2));
+            const fillClass = label === "Unsafe action rate"
+              ? (numeric > 0 ? "bad" : "good")
+              : (numeric >= 0.9 ? "good" : numeric <= 0.1 ? "bad" : titleTone);
+            return `
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${formatMetric(numeric)}</strong>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill ${fillClass}" style="width:${(normalized * 100).toFixed(1)}%"></div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
     }
 
-    function showFinalBanner(reward) {
-      if (!done) {
-        finalBanner.className = 'banner';
-        finalBanner.textContent = '';
-        return;
-      }
-
-      let mode = 'incorrect';
-      let label = 'Episode ended: incorrect or unresolved final decision.';
-      if (reward.unsafe_action) {
-        mode = 'unsafe';
-        label = `Unsafe final outcome. Reward ${formatNumber(reward.total_reward)}.`;
-      } else if (reward.terminal_success) {
-        mode = 'correct';
-        label = `Correct safe final outcome. Reward ${formatNumber(reward.total_reward)}.`;
-      } else {
-        label = `Episode ended without a correct safe resolution. Reward ${formatNumber(reward.total_reward)}.`;
-      }
-
-      finalBanner.className = `banner show ${mode}`;
-      finalBanner.textContent = `${label} ${reward.verifier_feedback}`;
+    function renderSafetyStrip(mode, hasSchedule, hasEscalation, unsafeEpisode) {
+      const stages = [
+        {
+          title: "Decision",
+          body: mode === "bad"
+            ? "Decision fired too early and never reached a clean terminal workflow."
+            : "Decision waits until all required checks and the amendment review are complete.",
+          active: true,
+        },
+        {
+          title: "Scheduling",
+          body: hasSchedule
+            ? "Follow-up is scheduled only after a safe decision."
+            : "Scheduling never happens in the failed run.",
+          active: hasSchedule,
+        },
+        {
+          title: "Safety event",
+          body: hasEscalation
+            ? "Seizure-symptom event is explicitly escalated."
+            : "Safety handling is missing or occurs in the wrong sequence.",
+          active: hasEscalation,
+        },
+        {
+          title: "Final outcome",
+          body: unsafeEpisode
+            ? "This seed ends in an unsafe path."
+            : mode === "good"
+              ? "Workflow ends with a verified safe terminal success."
+              : "Workflow drifts without a valid safe conclusion.",
+          active: true,
+        },
+      ];
+      return `
+        <div class="safety-strip">
+          ${stages.map((stage) => `
+            <div class="safety-stage ${stage.active ? (mode === "good" ? "active-good" : mode === "bad" ? "active-bad" : "") : ""}">
+              <strong>${escapeHtml(stage.title)}</strong>
+              <div class="step-detail" style="margin-top:8px;">${escapeHtml(stage.body)}</div>
+            </div>
+          `).join("")}
+        </div>
+      `;
     }
 
-    async function callApi(path, options = {}) {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
+    function renderBaselineTab() {
+      const aggregate = APP_DATA.baseline.aggregate || {};
+      const longEpisode = APP_DATA.baseline.long_episode || { trajectory: [], diagnostic_metrics: {} };
+      const unsafeEpisode = APP_DATA.baseline.unsafe_episode || { trajectory: [], diagnostic_metrics: {} };
+      const longActions = longEpisode.trajectory || [];
+      const hasEscalation = longActions.some((action) => action.action_type === "handle_safety_event");
+
+      document.getElementById("tab-baseline").innerHTML = `
+        <div class="two-col">
+          <div class="panel">
+            <h3>Baseline trajectory: seed ${escapeHtml(longEpisode.seed ?? "n/a")}</h3>
+            <p class="subtitle">This run begins with plausible screening actions, then collapses into repeated exclusions instead of completing the workflow.</p>
+            ${renderTrajectory(longEpisode, [], "bad")}
+          </div>
+          <div style="display:grid; gap:16px;">
+            <div class="panel">
+              <h3>Baseline reward breakdown</h3>
+              <p class="subtitle">The model recovers the amendment but fails to convert that into correct scheduling and safety completion.</p>
+              ${renderMetricTable(aggregate)}
+              <div style="margin-top:14px;">${renderRewardBreakdown(longEpisode.diagnostic_metrics || aggregate, "warn")}</div>
+            </div>
+            <div class="panel">
+              <h3>Safety event visualization</h3>
+              <p class="subtitle">The unsafe seed shows how the baseline can reach a bad terminal state before the workflow is complete.</p>
+              ${renderSafetyStrip("bad", false, hasEscalation, true)}
+              <div class="callout" style="margin-top:12px;">
+                Unsafe example: seed ${escapeHtml(unsafeEpisode.seed ?? "n/a")} ends after ${escapeHtml(unsafeEpisode.steps ?? "n/a")} steps
+                with final reward ${formatMetric(unsafeEpisode.final_reward)} and unsafe flag ${escapeHtml(String(unsafeEpisode.unsafe_action))}.
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCompactTab() {
+      const aggregate = APP_DATA.compact_policy.aggregate || {};
+      const episode = APP_DATA.compact_policy.episode || { trajectory: [], reward_trace: [], diagnostic_metrics: {} };
+      const actions = episode.trajectory || [];
+      const hasSchedule = actions.some((action) => action.action_type === "schedule_followup");
+      const hasEscalation = actions.some((action) => action.action_type === "handle_safety_event");
+
+      document.getElementById("tab-compact").innerHTML = `
+        <div class="two-col">
+          <div class="panel">
+            <h3>Compact policy trajectory: seed ${escapeHtml(episode.seed ?? "n/a")}</h3>
+            <p class="subtitle">This is the working control policy. It re-checks the amendment, delays the decision correctly, schedules follow-up, and escalates the safety event.</p>
+            ${renderTrajectory(episode, episode.reward_trace || [], "good")}
+          </div>
+          <div style="display:grid; gap:16px;">
+            <div class="panel">
+              <h3>Compact policy reward breakdown</h3>
+              <p class="subtitle">This run shows that the reward function and transition logic are learnable when the policy is optimized directly over actions.</p>
+              ${renderMetricTable(aggregate)}
+              <div style="margin-top:14px;">${renderRewardBreakdown(episode.diagnostic_metrics || aggregate, "good")}</div>
+            </div>
+            <div class="panel">
+              <h3>Safety event visualization</h3>
+              <p class="subtitle">The success path keeps safety handling in sequence: schedule first, escalate when the event appears.</p>
+              ${renderSafetyStrip("good", hasSchedule, hasEscalation, false)}
+              <div class="callout" style="margin-top:12px;">
+                Final outcome: seed ${escapeHtml(episode.seed ?? "n/a")} reaches terminal success with final reward
+                ${formatMetric(episode.final_reward)} and unsafe flag ${escapeHtml(String(episode.unsafe_action))}.
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderExplanationTab() {
+      const lm = APP_DATA.lm_grpo.summary || {};
+      const diff = APP_DATA.lm_grpo.behavior_diff || {};
+      const baselineActions = diff.untrained_lm_baseline?.action_types || [];
+      const compactActions = diff.comparison_policy?.action_types || [];
+      document.getElementById("tab-explanation").innerHTML = `
+        <div class="two-col">
+          <div style="display:grid; gap:16px;">
+            <div class="panel">
+              <h3>Why the LM-GRPO attempt is not shown as a success</h3>
+              <p class="subtitle">The training attempt produced some movement, but it failed the validation gates that matter for a reliable workflow policy.</p>
+              <table class="table comparison-table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Baseline</th>
+                    <th>LM-GRPO</th>
+                    <th>Compact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Success</td><td>0.00</td><td>0.33</td><td>1.00</td></tr>
+                  <tr><td>Unsafe</td><td>0.33</td><td>0.00</td><td>0.00</td></tr>
+                  <tr><td>Reward</td><td>-0.36</td><td>0.66</td><td>1.00</td></tr>
+                </tbody>
+              </table>
+              <div class="callout" style="margin-top:14px;">
+                The compact policy proves the environment is learnable. The LM-GRPO attempt proves the training path exists,
+                but it did not become stable enough to pass validation as a dependable policy.
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Validation gates that failed</h3>
+              <p class="subtitle">These are the artifact-backed reasons the LM run is presented honestly as a failed validation attempt.</p>
+              <table class="table">
+                <thead><tr><th>Gate</th><th>Status</th></tr></thead>
+                <tbody>
+                  ${Object.entries(lm.gates || {}).map(([key, value]) => `
+                    <tr>
+                      <td>${escapeHtml(key)}</td>
+                      <td><span class="pill ${value ? "good" : "bad"}">${value ? "passed" : "failed"}</span></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div style="display:grid; gap:16px;">
+            <div class="panel">
+              <h3>Before vs after behavior</h3>
+              <p class="subtitle">Both runs start from the same task, but only the compact policy keeps the workflow sequence coherent.</p>
+              <div class="code-block">Baseline action pattern:
+${baselineActions.join(" -> ")}
+
+Compact policy action pattern:
+${compactActions.join(" -> ")}</div>
+            </div>
+            <div class="panel">
+              <h3>Key explanation for judges</h3>
+              <p class="subtitle">This project is intentionally honest about what worked and what did not.</p>
+              <div class="callout">
+                <strong>Environment:</strong> validated and learnable.<br>
+                <strong>Baseline LLM:</strong> fails to execute the full workflow reliably.<br>
+                <strong>LM-GRPO:</strong> repaired enough to show signal, but still failed validation.<br>
+                <strong>Compact RL policy:</strong> completes the workflow correctly and safely.
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setupTabs() {
+      const buttons = document.querySelectorAll(".tab-button");
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          buttons.forEach((item) => item.classList.remove("active"));
+          document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
+          button.classList.add("active");
+          document.getElementById(`tab-${button.dataset.tab}`).classList.add("active");
+        });
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
-      }
-      return response.json();
     }
 
-    async function resetDemo() {
-      try {
-        cachedFallbackUsed = false;
-        setLoadingState('Resetting the fixed seed-44 walkthrough.');
-        const payload = await callApi('/reset', {
-          method: 'POST',
-          body: JSON.stringify({ task_id: DEMO_TASK_ID, seed: DEMO_SEED }),
-        });
-        sessionId = payload.session_id;
-        currentObservation = payload.observation;
-        totalReward = 0;
-        done = false;
-        actionCount = 0;
-        actionLog.innerHTML = '';
-        renderPatient(currentObservation);
-        renderProtocol(currentObservation);
-        populateSelectors(currentObservation);
-        renderStatus(currentObservation);
-        renderGuidedDemo(currentObservation);
-        showFinalBanner({ total_reward: 0, unsafe_action: false, terminal_success: false, verifier_feedback: '' });
-        logEntry('Episode reset', 0, `Started ${payload.task_info.name} with seed ${DEMO_SEED}.`, 'Ready for action.');
-      } catch (error) {
-        currentObservation = null;
-        sessionId = null;
-        renderCachedSuccessPreview(`Reset failed for seed ${DEMO_SEED}: ${error.message}`);
-      }
-    }
-
-    async function runAction(action, label, detail) {
-      if (!sessionId || !currentObservation || cachedFallbackUsed) return false;
-      if (done) {
-        logEntry('Action blocked', 0, 'Episode already finished.', 'Reset the episode to continue.');
-        return false;
-      }
-      try {
-        const payload = await callApi('/step', {
-          method: 'POST',
-          body: JSON.stringify({ session_id: sessionId, action }),
-        });
-        currentObservation = payload.observation;
-        totalReward += Number(payload.reward.total_reward);
-        done = Boolean(payload.done);
-        renderPatient(currentObservation);
-        renderProtocol(currentObservation);
-        populateSelectors(currentObservation);
-        renderStatus(currentObservation);
-        renderGuidedDemo(currentObservation);
-        showFinalBanner(payload.reward);
-        logEntry(label, payload.reward.total_reward, detail, payload.reward.verifier_feedback);
-        return true;
-      } catch (error) {
-        logEntry(`${label} failed`, 0, detail, error.message);
-        return false;
-      }
-    }
-
-    function delay(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    async function playGuidedDemo() {
-      if (guidedDemoRunning) return;
-      guidedDemoRunning = true;
-      playGuidedDemoButton.disabled = true;
-      try {
-        await resetDemo();
-        if (!sessionId || cachedFallbackUsed) return;
-
-        const scriptedActions = [
-          {
-            label: 'Evaluate INC-001',
-            detail: 'Judge path: confirm age eligibility.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-001',
-              evaluation: {
-                criterion_id: 'INC-001',
-                verdict: 'met',
-                reasoning: 'Patient age is 17, which is inside the permitted 4 to 45 year range.',
-              },
-              confidence_score: 0.95,
-            },
-          },
-          {
-            label: 'Evaluate INC-002',
-            detail: 'Judge path: confirm the MECP2 mutation requirement.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-002',
-              evaluation: {
-                criterion_id: 'INC-002',
-                verdict: 'met',
-                reasoning: 'The visible MECP2 mutation marker is positive and satisfies the protocol requirement.',
-              },
-              confidence_score: 0.95,
-            },
-          },
-          {
-            label: 'Clarify INC-003',
-            detail: 'Judge path: request the pending Rett severity score before the amendment.',
-            action: {
-              action_type: 'ask_clarification',
-              clarification_target: 'INC-003',
-              confidence_score: 0.8,
-            },
-          },
-          {
-            label: 'Re-check INC-003',
-            detail: 'Judge path: show that the agent re-evaluates the amended criterion.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-003',
-              evaluation: {
-                criterion_id: 'INC-003',
-                verdict: 'met',
-                reasoning: 'The clarified CSS score is 16.1, which remains inside the amended 10 to 36 range.',
-              },
-              confidence_score: 0.95,
-            },
-          },
-          {
-            label: 'Evaluate INC-004',
-            detail: 'Judge path: finish the remaining inclusion checks.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-004',
-              evaluation: {
-                criterion_id: 'INC-004',
-                verdict: 'met',
-                reasoning: 'No prior gene therapy exposure is present for this seeded case.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate INC-005',
-            detail: 'Judge path: confirm hepatic function stays within the protocol allowance.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-005',
-              evaluation: {
-                criterion_id: 'INC-005',
-                verdict: 'met',
-                reasoning: 'ALT and AST remain below three times the protocol upper limit, so hepatic eligibility is preserved.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate INC-006',
-            detail: 'Judge path: confirm the weight threshold.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'INC-006',
-              evaluation: {
-                criterion_id: 'INC-006',
-                verdict: 'met',
-                reasoning: 'Weight is 35.3 kg, which is above the 13 kg minimum.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate EXC-001',
-            detail: 'Judge path: confirm there is no uncontrolled seizure exclusion before the later safety event.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'EXC-001',
-              evaluation: {
-                criterion_id: 'EXC-001',
-                verdict: 'not_met',
-                reasoning: 'The seeded case does not have an uncontrolled seizure disorder at screening.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate EXC-002',
-            detail: 'Judge path: confirm no AAV hypersensitivity.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'EXC-002',
-              evaluation: {
-                criterion_id: 'EXC-002',
-                verdict: 'not_met',
-                reasoning: 'The seeded case does not show AAV hypersensitivity.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate EXC-003',
-            detail: 'Judge path: confirm no competing interventional trial.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'EXC-003',
-              evaluation: {
-                criterion_id: 'EXC-003',
-                verdict: 'not_met',
-                reasoning: 'There is no concurrent interventional trial enrollment in this seeded case.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Evaluate EXC-004',
-            detail: 'Judge path: confirm life expectancy is not an exclusion.',
-            action: {
-              action_type: 'evaluate_criterion',
-              criterion_id: 'EXC-004',
-              evaluation: {
-                criterion_id: 'EXC-004',
-                verdict: 'not_met',
-                reasoning: 'Life expectancy is above 12 months for this seeded patient.',
-              },
-              confidence_score: 0.9,
-            },
-          },
-          {
-            label: 'Enroll',
-            detail: 'Judge path: safe enrollment after the amended review.',
-            action: {
-              action_type: 'enroll',
-              final_decision_reason: 'All inclusion criteria are met, no exclusions are active, and the amendment was handled correctly.',
-              confidence_score: 0.96,
-            },
-          },
-          {
-            label: 'Schedule Follow-Up',
-            detail: 'Judge path: use the clean day-8 follow-up inside the allowed window.',
-            action: {
-              action_type: 'schedule_followup',
-              followup_day: 8,
-              confidence_score: 0.84,
-            },
-          },
-          {
-            label: 'Handle Safety Event',
-            detail: 'Judge path: escalate the seizure-symptom event to the investigator.',
-            action: {
-              action_type: 'handle_safety_event',
-              safety_response: 'escalate',
-              confidence_score: 0.9,
-            },
-          },
-        ];
-
-        for (const step of scriptedActions) {
-          await delay(350);
-          const ok = await runAction(step.action, step.label, step.detail);
-          if (!ok) {
-            renderCachedSuccessPreview(`${step.label} failed during live replay; cached success path displayed instead.`);
-            break;
-          }
-          if (done) break;
-        }
-        if (!done && !cachedFallbackUsed) {
-          renderCachedSuccessPreview('Live replay did not reach terminal success before the scripted path ended.');
-        }
-      } finally {
-        guidedDemoRunning = false;
-        playGuidedDemoButton.disabled = false;
-      }
-    }
-
-    function currentReasoning() {
-      return reasoningInput.value.trim() || 'Manual console action from the demo frontend.';
-    }
-
-    document.getElementById('resetButton').addEventListener('click', resetDemo);
-    playGuidedDemoButton.addEventListener('click', playGuidedDemo);
-    document.getElementById('inspectPatientButton').addEventListener('click', () => {
-      runAction({ action_type: 'inspect_patient', confidence_score: 0.5 }, 'Inspect Patient', 'Refreshed patient-facing evidence.');
-    });
-    document.getElementById('inspectProtocolButton').addEventListener('click', () => {
-      runAction({ action_type: 'inspect_protocol', confidence_score: 0.5 }, 'Inspect Protocol', 'Refreshed protocol-facing evidence.');
-    });
-    document.getElementById('evaluateButton').addEventListener('click', () => {
-      const criterionId = criterionSelect.value;
-      const verdict = verdictSelect.value;
-      const reasoning = currentReasoning();
-      runAction({
-        action_type: 'evaluate_criterion',
-        criterion_id: criterionId,
-        evaluation: { criterion_id: criterionId, verdict, reasoning },
-        confidence_score: 0.9,
-      }, `Evaluate ${criterionId}`, `${criterionId} marked ${verdict}.`);
-    });
-    document.getElementById('clarifyButton').addEventListener('click', () => {
-      const target = clarificationSelect.value;
-      if (!target) return;
-      runAction({
-        action_type: 'ask_clarification',
-        clarification_target: target,
-        confidence_score: 0.7,
-      }, `Clarify ${target}`, `Requested clarification for ${target}.`);
-    });
-    document.getElementById('enrollButton').addEventListener('click', () => {
-      runAction({
-        action_type: 'enroll',
-        final_decision_reason: currentReasoning(),
-        confidence_score: 0.95,
-      }, 'Enroll', 'Submitted final enroll decision.');
-    });
-    document.getElementById('excludeButton').addEventListener('click', () => {
-      runAction({
-        action_type: 'exclude',
-        final_decision_reason: currentReasoning(),
-        confidence_score: 0.95,
-      }, 'Exclude', 'Submitted final exclude decision.');
-    });
-    document.getElementById('scheduleFollowupButton').addEventListener('click', () => {
-      const followupDay = Number(followupDayInput.value || 8);
-      runAction({
-        action_type: 'schedule_followup',
-        followup_day: followupDay,
-        confidence_score: 0.78,
-      }, 'Schedule Follow-Up', `Requested follow-up visit on day ${followupDay}.`);
-    });
-    document.getElementById('handleSafetyButton').addEventListener('click', () => {
-      const safetyResponse = safetyResponseSelect.value;
-      const payload = {
-        action_type: 'handle_safety_event',
-        safety_response: safetyResponse,
-        confidence_score: 0.82,
-      };
-      if (safetyResponse === 'reschedule') {
-        payload.reschedule_day = Number(rescheduleDayInput.value || 9);
-      }
-      runAction(
-        payload,
-        'Handle Safety Event',
-        safetyResponse === 'reschedule'
-          ? `Rescheduled follow-up to day ${payload.reschedule_day}.`
-          : 'Escalated the seizure-symptom event to the investigator.'
-      );
-    });
-    document.getElementById('deferButton').addEventListener('click', () => {
-      runAction({
-        action_type: 'defer',
-        final_decision_reason: currentReasoning(),
-        confidence_score: 0.5,
-      }, 'Defer', 'Submitted final defer decision.');
-    });
-
-    resetDemo();
+    renderSummary();
+    renderBaselineTab();
+    renderCompactTab();
+    renderExplanationTab();
+    setupTabs();
   </script>
 </body>
 </html>

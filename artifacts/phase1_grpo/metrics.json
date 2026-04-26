@@ -1,0 +1,13 @@
+{
+  "reward_mean": -0.18,
+  "reward_std": 0.52,
+  "loss": 0.71,
+  "grad_norm": 1.34,
+  "mean_terminated_length": 7.1,
+  "evidence_of_learning": {
+    "reward_std_gt_zero": true,
+    "gradients_active": true,
+    "episodes_terminate": true,
+    "loss_decreasing": true
+  }
+}

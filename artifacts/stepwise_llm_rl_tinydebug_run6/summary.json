@@ -1,0 +1,23 @@
+{
+  "model_name": "tiny-debug",
+  "task_ids": [
+    "task1",
+    "task2",
+    "task3"
+  ],
+  "reward_std": 1.104536,
+  "reward_start": 0.1,
+  "reward_end": 0.1,
+  "success_rate_before": 0.3333,
+  "success_rate_after": 0.3333,
+  "mean_reward_before": -0.3333,
+  "mean_reward_after": -0.3333,
+  "unsafe_rate_before": 0.6667,
+  "unsafe_rate_after": 0.6667,
+  "sample_trajectory_diff": {
+    "task_id": null,
+    "seed": null,
+    "baseline_actions": [],
+    "trained_actions": []
+  }
+}

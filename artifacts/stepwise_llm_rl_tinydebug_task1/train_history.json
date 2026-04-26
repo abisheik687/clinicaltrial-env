@@ -1,0 +1,302 @@
+[
+  {
+    "episode": 0,
+    "task_id": "task1",
+    "seed": 1000,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.350876,
+    "reward_std_recent10": 0.0
+  },
+  {
+    "episode": 1,
+    "task_id": "task1",
+    "seed": 1001,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -236.398224,
+    "reward_std_recent10": 1.0
+  },
+  {
+    "episode": 2,
+    "task_id": "task1",
+    "seed": 1002,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.857178,
+    "reward_std_recent10": 0.942809
+  },
+  {
+    "episode": 3,
+    "task_id": "task1",
+    "seed": 1003,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.739197,
+    "reward_std_recent10": 0.866025
+  },
+  {
+    "episode": 4,
+    "task_id": "task1",
+    "seed": 1004,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -235.391815,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 5,
+    "task_id": "task1",
+    "seed": 1005,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.784241,
+    "reward_std_recent10": 0.942809
+  },
+  {
+    "episode": 6,
+    "task_id": "task1",
+    "seed": 1006,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.039383,
+    "reward_std_recent10": 0.903508
+  },
+  {
+    "episode": 7,
+    "task_id": "task1",
+    "seed": 1007,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.594864,
+    "reward_std_recent10": 0.866025
+  },
+  {
+    "episode": 8,
+    "task_id": "task1",
+    "seed": 1008,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.329407,
+    "reward_std_recent10": 0.831479
+  },
+  {
+    "episode": 9,
+    "task_id": "task1",
+    "seed": 1009,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 233.268036,
+    "reward_std_recent10": 0.8
+  },
+  {
+    "episode": 10,
+    "task_id": "task1",
+    "seed": 1010,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -234.331573,
+    "reward_std_recent10": 0.916515
+  },
+  {
+    "episode": 11,
+    "task_id": "task1",
+    "seed": 1011,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -233.266266,
+    "reward_std_recent10": 0.916515
+  },
+  {
+    "episode": 12,
+    "task_id": "task1",
+    "seed": 1012,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 234.03775,
+    "reward_std_recent10": 0.916515
+  },
+  {
+    "episode": 13,
+    "task_id": "task1",
+    "seed": 1013,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -232.640472,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 14,
+    "task_id": "task1",
+    "seed": 1014,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -234.308075,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 15,
+    "task_id": "task1",
+    "seed": 1015,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 235.156052,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 16,
+    "task_id": "task1",
+    "seed": 1016,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 243.985718,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 17,
+    "task_id": "task1",
+    "seed": 1017,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 233.65654,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 18,
+    "task_id": "task1",
+    "seed": 1018,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 233.732773,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 19,
+    "task_id": "task1",
+    "seed": 1019,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 232.752975,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 20,
+    "task_id": "task1",
+    "seed": 1020,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -233.203552,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 21,
+    "task_id": "task1",
+    "seed": 1021,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -233.415024,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 22,
+    "task_id": "task1",
+    "seed": 1022,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 232.63176,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 23,
+    "task_id": "task1",
+    "seed": 1023,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -231.37822,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 24,
+    "task_id": "task1",
+    "seed": 1024,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -233.181534,
+    "reward_std_recent10": 0.979796
+  },
+  {
+    "episode": 25,
+    "task_id": "task1",
+    "seed": 1025,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -231.91478,
+    "reward_std_recent10": 1.0
+  },
+  {
+    "episode": 26,
+    "task_id": "task1",
+    "seed": 1026,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 242.545151,
+    "reward_std_recent10": 1.0
+  },
+  {
+    "episode": 27,
+    "task_id": "task1",
+    "seed": 1027,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 232.721497,
+    "reward_std_recent10": 1.0
+  },
+  {
+    "episode": 28,
+    "task_id": "task1",
+    "seed": 1028,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 231.606796,
+    "reward_std_recent10": 1.0
+  },
+  {
+    "episode": 29,
+    "task_id": "task1",
+    "seed": 1029,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 243.137024,
+    "reward_std_recent10": 1.0
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "task_id": "task1",
+    "seed": 42,
+    "patient_id": "task1-preview-42",
+    "prompt_summary": "Screen a hypertension candidate against inclusion and exclusion criteria.",
+    "expected_first_action": {
+      "action_type": "evaluate_criterion",
+      "criterion_id": "INC-001",
+      "evaluation": {
+        "criterion_id": "INC-001",
+        "verdict": "met",
+        "reasoning": "age within range"
+      },
+      "confidence_score": 0.82
+    }
+  },
+  {
+    "task_id": "task3",
+    "seed": 44,
+    "patient_id": "task3-preview-44",
+    "prompt_summary": "Review a Rett syndrome gene-therapy case, react to an amendment, then schedule follow-up and handle safety escalation.",
+    "expected_terminal_action": {
+      "action_type": "exclude",
+      "final_decision_reason": "fallback_invalid_output"
+    }
+  }
+]

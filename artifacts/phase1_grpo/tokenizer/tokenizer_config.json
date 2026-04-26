@@ -1,0 +1,8 @@
+{
+  "model_max_length": 32768,
+  "padding_side": "left",
+  "truncation_side": "right",
+  "pad_token": "<|endoftext|>",
+  "eos_token": "<|endoftext|>",
+  "tokenizer_class": "AutoTokenizer"
+}

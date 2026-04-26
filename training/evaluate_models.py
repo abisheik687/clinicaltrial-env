@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import inference
-from training.trajectory_helpers import build_episode_prompt, parse_trajectory_completion
+from training.stepwise_action_policy import build_candidate_actions, build_generation_prompt, compact_action_json, summarize_action_history
 
 
 class FallbackOnlyClient:
@@ -27,14 +27,15 @@ class FallbackOnlyClient:
 
 
 class LocalModelClient:
-    """Evaluate local checkpoints with the same full-trajectory format used in GRPO."""
+    """Evaluate local checkpoints with strict stepwise JSON action generation."""
 
-    def __init__(self, model_name: str, max_new_tokens: int = 384) -> None:
+    def __init__(self, model_name: str, max_new_tokens: int = 384, do_sample: bool = False) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
+        self.do_sample = do_sample
         self.torch = torch
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
@@ -45,12 +46,7 @@ class LocalModelClient:
             self.model.to("cuda")
         if hasattr(self.model.generation_config, "max_length"):
             self.model.generation_config.max_length = None
-        for field in ("temperature", "top_p", "top_k"):
-            if hasattr(self.model.generation_config, field):
-                setattr(self.model.generation_config, field, None)
-        self.planned_trajectories: dict[str, list[dict[str, Any]]] = {}
-        self.plan_indices: dict[str, int] = {}
-        self.plan_failures: set[str] = set()
+        self.invalid_patients: set[str] = set()
 
     def get_action(
         self,
@@ -61,68 +57,99 @@ class LocalModelClient:
         task_id: str,
         action_records: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        del reward, history
         patient_id = observation["patient_id"]
         try:
-            if patient_id not in self.plan_failures:
-                if patient_id not in self.planned_trajectories or not action_records:
-                    self._cache_plan(
-                        patient_id=patient_id,
-                        observation=observation,
-                        task_id=task_id,
-                        max_actions=min(max(observation.get("steps_remaining", 1), 1), 14),
-                    )
-                planned_actions = self.planned_trajectories.get(patient_id, [])
-                plan_index = self.plan_indices.get(patient_id, 0)
-                if plan_index < len(planned_actions):
-                    planned_action = planned_actions[plan_index]
-                    self.plan_indices[patient_id] = plan_index + 1
-                    return inference.stabilize_action(
-                        planned_action,
-                        observation,
-                        task_id,
-                        action_records,
-                    )
+            prompt = build_generation_prompt(
+                tokenizer=self.tokenizer,
+                observation=observation,
+                reward=reward,
+                history=history,
+                step=step,
+                task_id=task_id,
+            )
+            candidates = build_candidate_actions(observation, task_id, action_records)
+            if not candidates:
+                raise ValueError("No valid candidates")
+            chosen = self._choose_candidate(prompt, candidates)
+            return inference.stabilize_action(chosen, observation, task_id, action_records)
         except Exception:
-            self.plan_failures.add(patient_id)
-        # No fallback heuristic — return a low-confidence exclude so
-        # evaluation reflects real model capability differences.
+            pass
+        self.invalid_patients.add(patient_id)
         return {
-            "action_type": "exclude",
-            "confidence_score": 0.1,
-            "final_decision_reason": "Model could not generate a valid plan.",
+            "action_type": "INVALID_ACTION",
+            "raw_output": "invalid_or_unparseable_model_action",
+            "confidence_score": 0.0,
         }
 
-    def _cache_plan(
-        self,
-        patient_id: str,
-        observation: dict[str, Any],
-        task_id: str,
-        max_actions: int,
-    ) -> None:
-        prompt = build_episode_prompt(
-            observation=observation,
-            task_id=task_id,
-            seed=None,
-            max_actions=max_actions,
-            tokenizer=self.tokenizer,
-        )
-        generated_text = self._generate_text(prompt)
-        self.planned_trajectories[patient_id] = parse_trajectory_completion(generated_text, max_actions=max_actions)
-        self.plan_indices[patient_id] = 0
+    def _candidate_logprob(self, prompt: str, candidate: dict[str, Any]) -> float:
+        return self._candidate_logprobs(prompt, [candidate])[0]
 
-    def _generate_text(self, prompt: str) -> str:
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        inputs = {key: value.to(self.model.device) for key, value in inputs.items()}
+    def _candidate_logprobs(self, prompt: str, candidates: list[dict[str, Any]]) -> list[float]:
+        prompt_ids = self.tokenizer(prompt, add_special_tokens=False, return_tensors="pt")["input_ids"][0].to(self.model.device)
+        if getattr(getattr(self.model, "config", None), "n_embd", 9999) <= 128:
+            scores: list[float] = []
+            for candidate in candidates:
+                candidate_ids = self.tokenizer(compact_action_json(candidate), add_special_tokens=False, return_tensors="pt")["input_ids"][0].to(self.model.device)
+                full_ids = self.torch.cat([prompt_ids, candidate_ids], dim=0)
+                labels = full_ids.clone()
+                labels[: prompt_ids.shape[0]] = -100
+                with self.torch.no_grad():
+                    outputs = self.model(
+                        input_ids=full_ids.unsqueeze(0),
+                        attention_mask=self.torch.ones_like(full_ids).unsqueeze(0),
+                        labels=labels.unsqueeze(0),
+                    )
+                token_count = max(int((labels != -100).sum().item()), 1)
+                scores.append(float((-outputs.loss * token_count).cpu().item()))
+            return scores
+        candidate_batches = [
+            self.tokenizer(compact_action_json(candidate), add_special_tokens=False, return_tensors="pt")["input_ids"][0].to(self.model.device)
+            for candidate in candidates
+        ]
+        pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+        full_sequences: list[Any] = []
+        label_sequences: list[Any] = []
+        max_len = 0
+        for candidate_ids in candidate_batches:
+            full_ids = self.torch.cat([prompt_ids, candidate_ids], dim=0)
+            labels = full_ids.clone()
+            labels[: prompt_ids.shape[0]] = -100
+            full_sequences.append(full_ids)
+            label_sequences.append(labels)
+            max_len = max(max_len, int(full_ids.shape[0]))
+
+        padded_inputs = []
+        padded_labels = []
+        padded_masks = []
+        for full_ids, labels in zip(full_sequences, label_sequences, strict=True):
+            pad_len = max_len - int(full_ids.shape[0])
+            padded_inputs.append(self.torch.cat([full_ids, self.torch.full((pad_len,), pad_id, device=self.model.device, dtype=full_ids.dtype)]))
+            padded_labels.append(self.torch.cat([labels, self.torch.full((pad_len,), -100, device=self.model.device, dtype=labels.dtype)]))
+            padded_masks.append(self.torch.cat([self.torch.ones_like(full_ids), self.torch.zeros(pad_len, device=self.model.device, dtype=full_ids.dtype)]))
+
+        batch_inputs = self.torch.stack(padded_inputs, dim=0)
+        batch_labels = self.torch.stack(padded_labels, dim=0)
+        batch_masks = self.torch.stack(padded_masks, dim=0)
         with self.torch.no_grad():
-            generated = self.model.generate(
-                **inputs,
-                do_sample=False,
-                max_new_tokens=self.max_new_tokens,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
-        completion_tokens = generated[0][inputs["input_ids"].shape[1] :]
-        return self.tokenizer.decode(completion_tokens, skip_special_tokens=True)
+            outputs = self.model(input_ids=batch_inputs, attention_mask=batch_masks)
+        shift_logits = outputs.logits[:, :-1, :]
+        shift_labels = batch_labels[:, 1:]
+        per_token_loss = self.torch.nn.functional.cross_entropy(
+            shift_logits.reshape(-1, shift_logits.size(-1)),
+            shift_labels.reshape(-1),
+            ignore_index=-100,
+            reduction="none",
+        ).view(shift_logits.size(0), -1)
+        return [float(value.cpu().item()) for value in (-per_token_loss.sum(dim=1))]
+
+    def _choose_candidate(self, prompt: str, candidates: list[dict[str, Any]]) -> dict[str, Any]:
+        scores = self.torch.tensor(self._candidate_logprobs(prompt, candidates), dtype=self.torch.float32)
+        if self.do_sample:
+            probabilities = self.torch.softmax(scores / 0.8, dim=0)
+            index = int(self.torch.multinomial(probabilities, 1).item())
+        else:
+            index = int(self.torch.argmax(scores).item())
+        return candidates[index]
 
 
 async def run_episode(
@@ -140,6 +167,7 @@ async def run_episode(
     session_id = reset_data["session_id"]
     history: list[str] = []
     action_records: list[dict[str, Any]] = []
+    action_log: list[dict[str, Any]] = []
     rewards: list[float] = []
     done = False
     fallback_used = False
@@ -172,6 +200,14 @@ async def run_episode(
                 action_records,
             )
 
+        if action.get("action_type") == "INVALID_ACTION":
+            last_reward = -1.0
+            rewards.append(last_reward)
+            action_log.append({"step": step, "action": action, "reward": last_reward, "invalid": True})
+            history.append(summarize_action_history(action))
+            fallback_used = True
+            continue
+
         response = await env_client.post("/step", json={"session_id": session_id, "action": action}, timeout=30.0)
         if response.status_code >= 400:
             fallback_used = True
@@ -188,7 +224,8 @@ async def run_episode(
         last_reward = float(data["reward"]["total_reward"])
         rewards.append(last_reward)
         action_records.append(action)
-        history.append(json.dumps(action, separators=(",", ":")))
+        action_log.append({"step": step, "action": action, "reward": last_reward, "invalid": False})
+        history.append(summarize_action_history(action))
 
     return {
         "task_id": task_id,
@@ -198,9 +235,10 @@ async def run_episode(
         "terminal_success": bool(final_reward_payload.get("terminal_success", False)),
         "unsafe_action": bool(final_reward_payload.get("unsafe_action", False)),
         "fallback_used": fallback_used
-        or (isinstance(model_client, LocalModelClient) and observation["patient_id"] in model_client.plan_failures),
+        or (isinstance(model_client, LocalModelClient) and observation["patient_id"] in model_client.invalid_patients),
         "diagnostic_metrics": final_reward_payload.get("diagnostic_metrics", {}),
         "trajectory": action_records,
+        "action_log": action_log,
     }
 
 
@@ -240,7 +278,11 @@ async def main_async(args: argparse.Namespace) -> None:
     if args.policy == "fallback":
         model_client: OpenAI | FallbackOnlyClient | LocalModelClient = FallbackOnlyClient()
     elif args.policy == "local_model":
-        model_client = LocalModelClient(model_name=args.model_name, max_new_tokens=args.max_new_tokens)
+        model_client = LocalModelClient(
+            model_name=args.model_name,
+            max_new_tokens=args.max_new_tokens,
+            do_sample=args.do_sample,
+        )
     else:
         os.environ["MODEL_NAME"] = args.model_name
         model_client = OpenAI(base_url=args.api_base_url, api_key=args.api_key)
@@ -295,6 +337,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-seeds", type=int, default=5)
     parser.add_argument("--task-ids", default="task1,task2,task3")
     parser.add_argument("--max-new-tokens", type=int, default=384)
+    parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--output", default="artifacts/eval/baseline_eval.json")
     return parser.parse_args()
 

@@ -1,17 +1,17 @@
 ---
-base_model: distilgpt2
+base_model: Qwen/Qwen2.5-0.5B-Instruct
 library_name: transformers
-model_name: phase1_grpo
+model_name: phase1_grpo_signal_fix
 tags:
 - generated_from_trainer
-- trl
 - grpo
+- trl
 licence: license
 ---
 
-# Model Card for phase1_grpo
+# Model Card for phase1_grpo_signal_fix
 
-This model is a fine-tuned version of [distilgpt2](https://huggingface.co/distilgpt2).
+This model is a fine-tuned version of [Qwen/Qwen2.5-0.5B-Instruct](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct).
 It has been trained using [TRL](https://github.com/huggingface/trl).
 
 ## Quick start
@@ -36,7 +36,7 @@ This model was trained with GRPO, a method introduced in [DeepSeekMath: Pushing 
 ### Framework versions
 
 - TRL: 1.2.0
-- Transformers: 5.6.2
+- Transformers: 5.6.1
 - Pytorch: 2.11.0
 - Datasets: 4.8.4
 - Tokenizers: 0.22.2

@@ -1,0 +1,23 @@
+[
+  {
+    "step": 5,
+    "loss": 0.84,
+    "grad_norm": 1.21,
+    "learning_rate": 0.000002,
+    "reward": -0.42,
+    "reward_std": 0.31,
+    "advantage_std": 0.27,
+    "mean_terminated_length": 6.4,
+    "entropy": 3.78
+  },
+  {
+    "step": 15,
+    "loss": 0.71,
+    "grad_norm": 1.34,
+    "learning_rate": 0.000002,
+    "reward": -0.18,
+    "reward_std": 0.52,
+    "advantage_std": 0.49,
+    "mean_terminated_length": 7.1
+  }
+]

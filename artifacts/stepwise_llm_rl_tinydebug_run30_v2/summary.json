@@ -1,0 +1,110 @@
+{
+  "model_name": "tiny-debug",
+  "task_ids": [
+    "task1",
+    "task2",
+    "task3"
+  ],
+  "reward_std": 1.033468,
+  "reward_start": -0.34,
+  "reward_end": 0.06,
+  "success_rate_before": 0.3,
+  "success_rate_after": 0.5,
+  "mean_reward_before": -0.3333,
+  "mean_reward_after": -0.3333,
+  "heldout_success_rate_before": 0.3333,
+  "heldout_success_rate_after": 0.3333,
+  "unsafe_rate_before": 0.6667,
+  "unsafe_rate_after": 0.6667,
+  "sample_trajectory_diff": {
+    "task_id": null,
+    "seed": null,
+    "baseline_actions": [],
+    "trained_actions": []
+  },
+  "training_trajectory_diff": {
+    "task_id": "task3",
+    "seed_start": 1000,
+    "seed_end": 3029,
+    "start_actions": [
+      {
+        "step": 1,
+        "raw_output": "{\"action_type\":\"evaluate_criterion\",\"criterion_id\":\"INC-001\",\"evaluation\":{\"criterion_id\":\"INC-001\",\"verdict\":\"met\",\"reasoning\":\"Patient age is 70, compared with the 18-75 inclusion range.\"},\"confidence_score\":0.73}",
+        "action": {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 70, compared with the 18-75 inclusion range."
+          },
+          "confidence_score": 0.73
+        },
+        "reward": 0.0,
+        "invalid": false
+      },
+      {
+        "step": 2,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": -1.0,
+        "invalid": false
+      }
+    ],
+    "end_actions": [
+      {
+        "step": 1,
+        "raw_output": "{\"action_type\":\"evaluate_criterion\",\"criterion_id\":\"INC-002\",\"evaluation\":{\"criterion_id\":\"INC-002\",\"verdict\":\"met\",\"reasoning\":\"MECP2 mutation marker is 1.0 with estimated certainty.\"},\"confidence_score\":0.73}",
+        "action": {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-002",
+          "evaluation": {
+            "criterion_id": "INC-002",
+            "verdict": "met",
+            "reasoning": "MECP2 mutation marker is 1.0 with estimated certainty."
+          },
+          "confidence_score": 0.73
+        },
+        "reward": 0.1,
+        "invalid": false
+      },
+      {
+        "step": 2,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": -0.05,
+        "invalid": false
+      },
+      {
+        "step": 3,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": -0.05,
+        "invalid": false
+      },
+      {
+        "step": 4,
+        "raw_output": "{\"action_type\":\"enroll\",\"final_decision_reason\":\"Alternative final decision for policy exploration.\",\"confidence_score\":0.34}",
+        "action": {
+          "action_type": "enroll",
+          "final_decision_reason": "Alternative final decision for policy exploration.",
+          "confidence_score": 0.34
+        },
+        "reward": -1.0,
+        "invalid": false
+      }
+    ]
+  }
+}

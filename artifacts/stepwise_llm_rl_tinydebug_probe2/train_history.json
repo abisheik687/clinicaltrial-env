@@ -1,0 +1,22 @@
+[
+  {
+    "episode": 0,
+    "task_id": "task1",
+    "seed": 1000,
+    "reward": -1.0,
+    "success": false,
+    "unsafe": true,
+    "loss": 232.687515,
+    "reward_std_recent10": 0.0
+  },
+  {
+    "episode": 1,
+    "task_id": "task2",
+    "seed": 2001,
+    "reward": 1.0,
+    "success": true,
+    "unsafe": false,
+    "loss": -232.442581,
+    "reward_std_recent10": 1.0
+  }
+]

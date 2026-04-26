@@ -1,0 +1,94 @@
+{
+  "policy": "local_model",
+  "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "seed_start": 5000,
+  "num_seeds": 1,
+  "task_ids": [
+    "task1"
+  ],
+  "aggregate": {
+    "success_rate": 0.0,
+    "unsafe_rate": 0.0,
+    "fallback_used_rate": 0.0,
+    "mean_final_reward": 0.0,
+    "amendment_recovery_rate": 1.0,
+    "eligibility_component_score": 0.0,
+    "amendment_component_score": 0.0,
+    "scheduling_component_score": 0.0,
+    "safety_component_score": 0.0
+  },
+  "aggregate_by_task": {
+    "task1": {
+      "success_rate": 0.0,
+      "unsafe_rate": 0.0,
+      "fallback_used_rate": 0.0,
+      "mean_final_reward": 0.0,
+      "amendment_recovery_rate": 1.0,
+      "eligibility_component_score": 0.0,
+      "amendment_component_score": 0.0,
+      "scheduling_component_score": 0.0,
+      "safety_component_score": 0.0
+    }
+  },
+  "episodes": [
+    {
+      "task_id": "task1",
+      "seed": 5000,
+      "steps": 2,
+      "final_reward": 0.0,
+      "terminal_success": false,
+      "unsafe_action": false,
+      "fallback_used": false,
+      "diagnostic_metrics": {
+        "criterion_evaluation_accuracy": 1.0,
+        "clarification_efficiency": 1.0,
+        "unsafe_action_rate": 0.0,
+        "amendment_recovery_rate": 1.0
+      },
+      "trajectory": [
+        {
+          "action_type": "evaluate_criterion",
+          "criterion_id": "INC-001",
+          "evaluation": {
+            "criterion_id": "INC-001",
+            "verdict": "met",
+            "reasoning": "Patient age is 43, compared with the 18-75 inclusion range."
+          },
+          "confidence_score": 0.72
+        },
+        {
+          "action_type": "defer",
+          "final_decision_reason": "Eligibility remains unresolved pending further review.",
+          "confidence_score": 0.41
+        }
+      ],
+      "action_log": [
+        {
+          "step": 1,
+          "action": {
+            "action_type": "evaluate_criterion",
+            "criterion_id": "INC-001",
+            "evaluation": {
+              "criterion_id": "INC-001",
+              "verdict": "met",
+              "reasoning": "Patient age is 43, compared with the 18-75 inclusion range."
+            },
+            "confidence_score": 0.72
+          },
+          "reward": 0.0,
+          "invalid": false
+        },
+        {
+          "step": 2,
+          "action": {
+            "action_type": "defer",
+            "final_decision_reason": "Eligibility remains unresolved pending further review.",
+            "confidence_score": 0.41
+          },
+          "reward": 0.0,
+          "invalid": false
+        }
+      ]
+    }
+  ]
+}

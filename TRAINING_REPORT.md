@@ -1,53 +1,121 @@
-# ClinicalTrialEnv Training Report
+# Training Report
 
-## Baseline Failure
+## 1. Objective
 
-ClinicalTrialEnv is a real OpenEnv-style clinical workflow environment. Task 3 requires stateful coordination across criterion review, a protocol amendment, an enrollment decision, follow-up scheduling, and seizure-symptom safety handling.
+Train an LLM to solve **ClinicalTrialEnv Task 3** using **GRPO** against the OpenEnv HTTP environment.
 
-The untrained LLM baseline fails this workflow:
+Task 3 is the Rett syndrome workflow:
 
-| Metric | Untrained LLM Baseline |
+- screening
+- amendment activation
+- re-check of affected criteria
+- final decision
+- follow-up scheduling
+- safety-event handling
+
+The target was not text quality. The target was correct multi-step environment execution.
+
+## 2. Setup
+
+- **Model:** `distilgpt2` for local debugging
+- **RL:** TRL `GRPOTrainer`
+- **Environment:** ClinicalTrialEnv over OpenEnv HTTP APIs
+- **Task:** `task3`
+
+Core runtime path:
+
+- model generates JSON trajectory candidates
+- parser converts output into valid environment actions
+- trajectory is replayed through `POST /step`
+- scalar reward is returned to GRPO
+
+## 3. Training Issues
+
+The original LM training path was broken in multiple ways. These were addressed during debugging:
+
+- **zero reward variance**  
+  Fixed by repairing rollout parsing, ensuring valid fallback behavior, and restoring non-constant reward flow.
+
+- **parsing failures**  
+  Fixed by tightening the prompt format and routing invalid outputs through a valid fallback trajectory.
+
+- **token overflow**  
+  Fixed by truncating prompts consistently during dataset construction and rollout generation.
+
+These fixes were enough to restore a measurable learning signal, but not enough to produce a reliable Task 3 policy.
+
+## 4. Final Result
+
+The repaired training run achieved:
+
+- `reward_std > 0`
+- non-zero `advantage_mean`
+- non-zero loss and active gradients
+
+However, the final outcome was still not strong enough to claim meaningful LLM improvement on Task 3.
+
+In plain terms:
+
+- the **training pipeline is no longer dead**
+- the **environment reward signal is real**
+- the **LM policy still did not become submission-grade**
+
+## 5. Metrics Table
+
+### Training Signal (repaired local GRPO run)
+
+| Metric | Value |
 | --- | ---: |
-| Success rate | 0.0000 |
-| Unsafe action rate | 0.3333 |
-| Mean final reward | -0.3667 |
-| Amendment recovery rate | 1.0000 |
+| reward mean | -0.0439 |
+| reward std | 0.1292 |
+| advantage mean | 0.1094 |
+| advantage std | 0.1119 |
+| loss | 0.000638 |
+| grad norm | 8.1250 |
+| invalid / unsafe trajectory rate | 0.0 |
 
-## Evidence Tracks
+Source: `artifacts/phase1_grpo_signal_fix/train_log_history.json`
 
-| Track | File | Validation Status | Interpretation |
-| --- | --- | --- | --- |
-| Untrained LLM baseline | `artifacts/eval/base_model_task3_eval.json` | Passed as baseline evidence | Demonstrates scripted LLM workflow failure. |
-| LM-GRPO attempt | `artifacts/eval/lm_grpo_task3_eval_failed.json` | Failed | Kept for transparency; not claimed as successful LLM training. |
-| Compact RL policy | `artifacts/eval/policy_gradient_task3_eval.json` | Passed | Shows verifier rewards can train a compact action policy. |
+### Evaluation Outcome
 
-## Compact RL Policy
+| Metric | Baseline | LM-GRPO | Compact Policy |
+| --- | ---: | ---: | ---: |
+| Success | 0.0 | 0.33 | 1.0 |
+| Unsafe | 0.33 | 0.0 | 0.0 |
+| Reward | -0.36 | 0.66 | 1.0 |
 
-The compact policy is trained by `training/train_task3_policy_gradient.py`. It is a small Torch action policy trained against the ClinicalTrialEnv verifier. It is not an LLM fine-tune and is not presented as GRPO success.
+Environment-side reference files:
 
-![Training reward curve](artifacts/plots/training_reward_curve.png)
+- baseline: `artifacts/eval/base_model_task3_eval.json`
+- failed LM-GRPO summary: `artifacts/eval/lm_grpo_validation_summary_failed.json`
+- compact RL policy: `artifacts/eval/policy_gradient_task3_eval.json`
 
-Final compact-policy evaluation:
+Important note:
 
-| Metric | Compact RL Policy |
-| --- | ---: |
-| Success rate | 1.0000 |
-| Unsafe action rate | 0.0000 |
-| Mean final reward | 1.0000 |
-| Amendment recovery rate | 1.0000 |
+The LM-GRPO attempt produced partial signs of movement, but the validation summary still failed key gates:
 
-![Held-out comparison](artifacts/plots/heldout_base_vs_trained.png)
+- reward variance gate failed in the original validation attempt
+- done-rate gate failed
+- valid trajectory rate gate failed
+- reward delta gate failed
 
-## LM-GRPO Attempt
+That is why the LM result must be treated as **an unfinished attempt**, not a successful trained policy.
 
-The LM-GRPO path in `training/grpo_phase1.py` remains part of the project, but the current preserved run did not pass stricter LLM-specific validation gates.
+## 6. Key Insight
 
-| Metric | Failed LM-GRPO Attempt |
-| --- | ---: |
-| Success rate | 0.3333 |
-| Unsafe action rate | 0.0000 |
-| Mean final reward | 0.6667 |
+**Environment is learnable. Current LLM setup insufficient.**
 
-## Final Interpretation
+The compact RL policy reaching perfect Task 3 performance shows the environment and reward design are workable. The bottleneck is the current language-model training setup, not the environment itself.
 
-ClinicalTrialEnv exposes a real untrained LLM failure mode, and its verifier reward can train a compact action policy to solve Task 3. The current repository does not claim that LM-GRPO has already produced a successful trained LLM.
+## 7. Conclusion
+
+Pipeline works, learning signal exists, scaling required.
+
+More specifically:
+
+- ClinicalTrialEnv is a functioning RL environment
+- the repaired GRPO training path now produces non-zero signal
+- the compact policy proves the task is solvable
+- the current LLM configuration still does not deliver reliable improvement on Task 3
+
+This is progress, but not a finished LLM-RL success story yet.

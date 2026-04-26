@@ -1,115 +1,155 @@
----
-title: ClinicalTrialEnv
-emoji: "🏥"
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
-license: mit
-tags:
-  - openenv
-  - clinical-trials
-  - reinforcement-learning
-  - healthcare
-  - professional-workflow
-app_port: 7860
----
+# ClinicalTrialEnv: RL environment for clinical trial workflow execution
 
-# ClinicalTrialEnv
+ClinicalTrialEnv is an OpenEnv-compatible reinforcement learning environment for multi-step clinical trial coordination. It focuses on stateful, safety-critical workflow execution rather than one-shot text generation.
 
-ClinicalTrialEnv is an OpenEnv-compatible clinical trial operations environment. It tests whether an agent can execute a changing professional workflow: screen a synthetic patient, react to a mid-episode protocol amendment, make a safe enrollment decision, schedule follow-up when appropriate, and handle a seizure-symptom safety event.
+Judge-facing entry points:
 
-The current evidence should be read carefully:
+- HF Space demo UI: [https://abisheiks-clinicaltrial-env.hf.space](https://abisheiks-clinicaltrial-env.hf.space)
+- Colab quick demo: [notebooks/train_colab.ipynb](notebooks/train_colab.ipynb)
+- Short blog: [docs/blog.md](docs/blog.md)
+- Training report: [TRAINING_REPORT.md](TRAINING_REPORT.md)
 
-- The **environment and untrained LLM baseline failure are real**.
-- The **LM-GRPO training attempt is preserved but has not passed validation**.
-- The **compact RL policy is a separate verifier-trained action policy**, not proof that the LLM checkpoint learned the workflow.
+## Problem
 
-## Environment
+Real-world clinical workflows are:
 
-Task 3 is the finals showcase. One episode requires the agent to:
+- multi-step
+- stateful
+- safety-critical
+- sensitive to incomplete information and protocol changes
 
-1. Screen a Rett-syndrome gene-therapy candidate.
-2. Notice a mid-episode protocol amendment.
-3. Re-check `INC-003` under the amended CSS threshold.
-4. Safely enroll or exclude.
-5. Schedule one follow-up visit inside day `7..10` if enrolled.
-6. Escalate the deterministic seizure-symptom safety event.
+Large language models can sound convincing in this setting while still failing at consistent execution. ClinicalTrialEnv exists to test whether a policy can carry state, react to amendments, and finish the workflow safely.
 
-The public API is unchanged:
+## Environment Overview
+
+This repository centers on **Task 3**, a Rett syndrome screening workflow with a forced protocol change mid-episode.
+
+Workflow stages:
+
+1. screening
+2. amendment activation
+3. re-check of affected criteria
+4. final decision
+5. follow-up scheduling
+6. safety-event handling
+
+The goal is not to generate a plausible explanation. The goal is to execute the workflow correctly through the environment's transition rules and reward function.
+
+## API
+
+ClinicalTrialEnv exposes a small OpenEnv HTTP surface:
 
 - `POST /reset`
 - `POST /step`
 - `GET /state`
 - `GET /health`
-- `POST /validate_session`
 
-## Evidence Tracks
+## Evidence
 
-| Track | Artifact | Status | What It Means |
-| --- | --- | --- | --- |
-| Untrained LLM baseline | `artifacts/eval/base_model_task3_eval.json` | Valid | Shows brittle scripted behavior and unsafe enrollment risk. |
-| LM-GRPO attempt | `artifacts/eval/lm_grpo_task3_eval_failed.json` | Failed | Preserved as an honest failed LLM fine-tuning attempt. |
-| Compact RL policy | `artifacts/eval/policy_gradient_task3_eval.json` | Passed | Shows the verifier/reward loop can train an action policy on Task 3. |
+The project now has four distinct pieces, and they should not be conflated:
 
-![Training reward curve](artifacts/plots/training_reward_curve.png)
+1. **Environment**
+   ClinicalTrialEnv itself is working and validated as an OpenEnv environment.
+2. **Untrained baseline**
+   The base language-model policy is weak on Task 3 and fails to complete the workflow reliably.
+3. **Failed LM-GRPO attempt**
+   The LM-GRPO training pipeline exists, but it did **not** pass validation and did **not** produce a reliable submission-grade policy.
+4. **Compact RL policy**
+   A smaller compact RL policy does solve the environment, which shows the reward function and transition dynamics are learnable.
 
-Caption: compact action-policy reward improves against the untrained LLM baseline. This plot is not an LM-GRPO success claim.
-
-![Held-out base vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
-
-Caption: held-out Task 3 comparison for the **Untrained LLM Baseline** and **Compact RL Policy**.
-
-## Current Metrics
-
-| Metric | Untrained LLM Baseline | Failed LM-GRPO Attempt | Compact RL Policy |
+| Metric | Baseline | LM-GRPO | Compact Policy |
 | --- | ---: | ---: | ---: |
-| Success rate | 0.0000 | 0.3333 | 1.0000 |
-| Unsafe rate | 0.3333 | 0.0000 | 0.0000 |
-| Mean final reward | -0.3667 | 0.6667 | 1.0000 |
-| Amendment recovery rate | 1.0000 | 1.0000 | 1.0000 |
+| Success | 0.0 | 0.33 | 1.0 |
+| Unsafe | 0.33 | 0.0 | 0.0 |
+| Reward | -0.36 | 0.66 | 1.0 |
 
-The compact policy is intentionally labeled separately because it is not a generated-language checkpoint. It trains a small Torch action policy directly against the same ClinicalTrialEnv verifier rewards.
+## What These Results Mean
 
-## Run Locally
+The important takeaway is narrow and honest:
+
+- the **environment works**
+- the **reward signal works**
+- the **compact RL policy works**
+- the **LM-GRPO pipeline did not become stable enough to count as a validated success**
+
+That means the project demonstrates a valid RL environment and a learnable control problem, but it does **not** justify claiming that the language-model training run solved Task 3.
+
+## Images
+
+Reward curve:
+
+![Reward curve](artifacts/plots/training_reward_curve.png)
+
+Baseline vs trained comparison:
+
+![Baseline vs trained comparison](artifacts/plots/heldout_base_vs_trained.png)
+
+## Judge Quickstart
+
+If you only have a few minutes, use this order:
+
+1. Open the HF Space UI and inspect the `Baseline run`, `Compact policy run`, and `Explanation` tabs.
+2. Open the Colab notebook for a lightweight end-to-end demo without heavy training.
+3. Read the short blog for the narrative summary.
+4. Use the training report if you want the artifact-backed status of the LM-GRPO attempt.
+
+## How to Run
+
+### Local
+
+Install dependencies:
 
 ```bash
-python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m uvicorn server.main:app --host 0.0.0.0 --port 7860
+pip install -r requirements.txt
 ```
 
-Verify the anchor path:
+Start the environment server:
 
 ```bash
-.venv/Scripts/python training/verify_task3_anchor.py --env-url http://localhost:7860
+uv run uvicorn server.main:app --host 0.0.0.0 --port 7860
 ```
 
-Regenerate the compact policy artifacts:
+Run the baseline / training scripts from a separate shell as needed:
 
 ```bash
-.venv/Scripts/python training/train_task3_policy_gradient.py --seed-start 200 --train-seed-count 50 --eval-seed-start 200 --eval-num-seeds 50 --train-steps 15 --batch-size 50 --learning-rate 0.3 --log-every 1
-.venv/Scripts/python training/validate_training_outputs.py --mode action_policy --train-log artifacts/phase1_pg/train_log_history.json --trained-eval artifacts/eval/policy_gradient_task3_eval.json
+python inference.py
 ```
 
-Attempt LM-GRPO separately:
+```bash
+python training/grpo_phase1.py --model distilgpt2 --env-url http://localhost:7860
+```
+
+### Hugging Face Space
+
+The deployed environment is available as a Docker Space:
+
+- Space: [abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- Live app: [https://abisheiks-clinicaltrial-env.hf.space](https://abisheiks-clinicaltrial-env.hf.space)
+
+The Space UI is intentionally structured for review:
+
+- `Baseline run` shows the failed untrained LM trajectory
+- `Compact policy run` shows the successful control policy trajectory
+- `Explanation` summarizes why the compact policy succeeds while LM-GRPO did not validate
+
+Quick checks:
 
 ```bash
-.venv/Scripts/python training/grpo_phase1.py --env-url http://localhost:7860 --task-id task3 --output-dir artifacts/phase1_grpo
-.venv/Scripts/python training/validate_training_outputs.py --mode lm_grpo --allow-failed --train-log artifacts/phase1_grpo/train_log_history.json --trained-eval artifacts/eval/lm_grpo_task3_eval_failed.json
+curl https://abisheiks-clinicaltrial-env.hf.space/health
+```
+
+```bash
+curl -X POST https://abisheiks-clinicaltrial-env.hf.space/reset -H "Content-Type: application/json" -d '{}'
 ```
 
 ## Links
 
-- **GitHub repo:** [github.com/abisheik687/clinicaltrial-env](https://github.com/abisheik687/clinicaltrial-env)
-- **Hugging Face Space:** [huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
-- **Artifact manifest:** [artifacts/eval/artifact_manifest.json](artifacts/eval/artifact_manifest.json)
-- **Training report:** [TRAINING_REPORT.md](TRAINING_REPORT.md)
+- HF Space: [https://huggingface.co/spaces/abisheiks/clinicaltrial-env](https://huggingface.co/spaces/abisheiks/clinicaltrial-env)
+- Training report: [TRAINING_REPORT.md](TRAINING_REPORT.md)
+- Technical training notes: [docs/training.md](docs/training.md)
+- Blog: [docs/blog.md](docs/blog.md)
+- Colab: [notebooks/train_colab.ipynb](notebooks/train_colab.ipynb)
 
-## Validation
+## Honest Conclusion
 
-```bash
-.venv/Scripts/python -m pytest -q
-.venv/Scripts/openenv.exe validate
-docker build -t clinicaltrial-env .
-```
+Environment validated. RL pipeline functional. LLM improvement remains future work.

@@ -9,6 +9,15 @@ python-multipart>=0.0.18,<1
 httpx>=0.28.1,<1
 openai>=2.7.2
 openenv>=0.1.13,<0.2
+torch>=2.6,<3
+accelerate>=1.0.1
+datasets>=3.0.1
+transformers>=4.45.2
+trl>=0.11.4
+peft>=0.13.2
+matplotlib>=3.9.2
+pandas>=2.2.3
+bitsandbytes>=0.45.0; platform_system != "Windows"
 pytest==8.3.3
 pytest-asyncio==0.24.0
 hypothesis>=6,<7
