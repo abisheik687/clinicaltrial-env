@@ -1,3 +1,19 @@
+---
+title: ClinicalTrialEnv
+emoji: 🏥
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+tags:
+  - openenv
+  - reinforcement-learning
+  - clinical-trials
+  - healthcare
+  - docker
+---
+
 # ClinicalTrialEnv: RL environment for clinical trial workflow execution
 
 ClinicalTrialEnv is an OpenEnv-compatible reinforcement learning environment for multi-step clinical trial coordination. It focuses on stateful, safety-critical workflow execution rather than one-shot text generation.
